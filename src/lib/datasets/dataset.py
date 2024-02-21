@@ -11,16 +11,20 @@ from src.lib.utils.utils import CustomException
 
 
 class DatasetWrapper(Dataset):
-    def __init__(self, **kwargs):
+    def __init__(self,  dataset_name, root_path, dataset_path, split_list, input_channel_path, output_channel_path,
+                 channel_table_path, resize, convert_gray, crop_size, crop_range, crop_augmentation, rotation_augmentation,
+                 normalization, image_dtype, data_range, in_channels, out_channels, image_size, model_name,
+                 dim_match, input_dim_label, output_dim_label):
         self.dataset_name = dataset_name
         self.root_path = root_path
-        with open(f"{root_path}/{split_list}", 'r') as f:
+        self.dataset_path = dataset_path
+        with open(f"{self.dataset_path}/{split_list}", 'r') as f:
             self.filepath_list = [line.rstrip() for line in f]
-        with open(f"{root_path}/{input_channel_path}", 'r') as f:
+        with open(f"{self.dataset_path}/{input_channel_path}", 'r') as f:
             self.input_channel_list = [line.rstrip() for line in f]
-        with open(f"{root_path}/{output_channel_path}", 'r') as f:
+        with open(f"{self.dataset_path}/{output_channel_path}", 'r') as f:
             self.output_channel_list = [line.rstrip() for line in f]
-        with open(f"{root_path}/{channel_table_path}", 'r') as f:
+        with open(f"{self.dataset_path}/{channel_table_path}", 'r') as f:
             self.channel_table = json.load(f)
         self.resize = resize
         self.convert_gray = convert_gray
@@ -31,8 +35,8 @@ class DatasetWrapper(Dataset):
         self.normalization = normalization
         self.image_dtype = image_dtype
         self.data_range = data_range
-        self.in_channels = int(in_channels)
-        self.out_channels = int(out_channels)
+        self.in_channels = in_channels
+        self.out_channels = out_channels
         self.image_size = image_size
         self.model_name = model_name
         self.dim_match = dim_match
@@ -40,7 +44,7 @@ class DatasetWrapper(Dataset):
         self.output_dim_label = output_dim_label
 
     def __len__(self):
-        return len(self.file_list)
+        return len(self.filepath_list)
 
     def _load_img(self, i, mode):
 
@@ -234,6 +238,7 @@ def get_dataset(args):
     train_dataset = DatasetWrapper(
         dataset_name=str(args.dataset_name),
         root_path=str(args.root_path),
+        dataset_path=str(args.dataset_path),
         input_channel_path=str(args.input_channel_path),
         output_channel_path=str(args.output_channel_path),
         channel_table_path=str(args.channel_table_path),
@@ -258,6 +263,7 @@ def get_dataset(args):
     validation_dataset = DatasetWrapper(
         dataset_name=str(args.dataset_name),
         root_path=str(args.root_path),
+        dataset_path=str(args.dataset_path),
         input_channel_path=str(args.input_channel_path),
         output_channel_path=str(args.output_channel_path),
         channel_table_path=str(args.channel_table_path),
@@ -288,6 +294,7 @@ def get_test_dataset(args):
     test_dataset = DatasetWrapper(
         dataset_name=str(args.dataset_name),
         root_path=str(args.root_path),
+        dataset_path=str(args.dataset_path),
         input_channel_path=str(args.input_channel_path),
         output_channel_path=str(args.output_channel_path),
         channel_table_path=str(args.channel_table_path),
