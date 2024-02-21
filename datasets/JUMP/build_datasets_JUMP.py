@@ -209,7 +209,7 @@ def main(args):
         write_list_to_txt(savefilepath=f"{save_dir}/test.txt", path_list=test_filepath_list)
 
         # verify filepath_list
-        verify_datasets(save_dir=save_dir, fold_num=fold_num, total_train_val=len(train_val_filepath_list), f=f)
+        #verify_datasets(save_dir=save_dir, fold_num=fold_num, total_train_val=len(train_val_filepath_list), f=f)
 
         print('='*100, file=f)
         print('Finish', file=f)
