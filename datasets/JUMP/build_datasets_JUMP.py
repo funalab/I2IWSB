@@ -17,8 +17,8 @@ def gather_position(path_list: list):  # positionをまとめるa[:a.find('-')]
 def gather_well_id(filepath_list: list):  # filepath_listからwell_idをまとめる
     well_id_list = []
     for p in filepath_list:
-        pos = os.path.basename(p)[:6]  # 'r11c16f06p01' to 'r11c16'
-        plate_name = filepath_list[:10]  # 'BR00117010'
+        pos = p[p.rfind('/')+1:][:6]  # 'r11c16f06p01' to 'r11c16'
+        plate_name = p[:10]  # 'BR00117010'
         well_id = f"{plate_name }-{pos}"
         if not well_id in well_id_list:
             well_id_list.append(well_id)
@@ -156,7 +156,7 @@ def main(args):
     elif test_split_mode == 'well':
         # create filepath_list
         filepath_list = create_filepath_list_from_well_plate_path_list(well_plate_path_list)
-        print(filepath_list[0])
+
         # gather well id
         well_id_list = gather_well_id(filepath_list)
 
