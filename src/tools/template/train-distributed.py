@@ -46,7 +46,7 @@ def main(args):
 
     ''' Dataset '''
     # Load datasets
-    train_dataset, validation_dataset = get_dataset_DF(args=args)
+    train_dataset, validation_dataset = get_dataset(args=args)
 
     ''' Model '''
     # Initialize a model to train
