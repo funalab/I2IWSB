@@ -1,0 +1,14 @@
+torch==2.0.0
+torchvision==0.15.1
+numpy==1.24.2
+scipy==1.9.1
+pandas==2.0.0
+scikit-image==0.20.0
+scikit-learn==1.2.2
+matplotlib==3.7.1
+opencv-python==4.8.1.78
+pytz==2023.3
+tqdm==4.65.0
+torch_ema==0.3
+prefetch_generator==1.0.3
+imagecodecs==2024.1.1

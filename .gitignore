@@ -1,0 +1,26 @@
+#Mac OSX
+.DS_Store
+
+#Emacs
+*~
+
+#Python
+*.pyc
+lib/*.pyc
+.ipynb_checkpoints
+
+#Output&Resource
+results/
+nohup.out
+
+# envs
+*.yml
+venv/
+requirements_dev.txt
+.env
+*venv*/
+/*.idea/
+*tmp*/
+/datasets_JUMP/illum/
+/datasets_JUMP/load_data_csv/
+/datasets_JUMP/images/
