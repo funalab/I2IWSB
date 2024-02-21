@@ -40,7 +40,6 @@ def create_filepath_list_from_well_id(well_id_list: list, whole_filepath_list: l
     for well_id in well_id_list:
         plate_name = well_id[:well_id.find('-')]
         well_name = well_id[well_id.find('-')+1:]
-        print(plate_name,well_name)
 
         fil = filter(lambda x: plate_name in x and well_name in x, whole_filepath_list)
         filtered_filepath_list = []
@@ -160,18 +159,19 @@ def main(args):
 
         # gather well id
         well_id_list = gather_well_id(filepath_list)
+        print(well_id_list[0])
 
         # split well id
         test_well_id_num = int(np.floor(test_ratio*len(well_id_list)))
         if test_well_id_num == 0:
             test_well_id_num = 1
         test_well_id_list = rg.choice(well_id_list, test_well_id_num).tolist()
-
+        print(test_well_id_list[0])
         train_val_well_id_list = []
         for well_id in well_id_list:
             if not well_id in test_well_id_list:
                 train_val_well_id_list.append(well_id)
-
+        print(train_val_well_id_list[0])
         # extract filepath
         train_val_filepath_list = create_filepath_list_from_well_id(train_val_well_id_list, filepath_list)
         test_filepath_list = create_filepath_list_from_well_id(test_well_id_list, filepath_list)
