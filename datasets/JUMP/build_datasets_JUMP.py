@@ -156,10 +156,10 @@ def main(args):
     elif test_split_mode == 'well':
         # create filepath_list
         filepath_list = create_filepath_list_from_well_plate_path_list(well_plate_path_list)
-
+        print(len(filepath_list))
         # gather well id
         well_id_list = gather_well_id(filepath_list)
-
+        print(len(well_id_list))
         # split well id
         test_well_id_num = int(np.floor(test_ratio*len(well_id_list)))
         if test_well_id_num == 0:
@@ -170,7 +170,8 @@ def main(args):
         for well_id in well_id_list:
             if not well_id in test_well_id_list:
                 train_val_well_id_list.append(well_id)
-
+        print(len(test_well_id_list))
+        print(len(train_val_well_id_list))
         # extract filepath
         train_val_filepath_list = create_filepath_list_from_well_id(train_val_well_id_list, filepath_list)
         test_filepath_list = create_filepath_list_from_well_id(test_well_id_list, filepath_list)
