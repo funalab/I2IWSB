@@ -1,0 +1,22 @@
+[Split mode] well
+====================================================================================================
+total file num: 14103
+total file num (train+validation): 11340
+total file num (test): 2763
+[fold0] train: 8505, validation: 2835
+[fold1] train: 8505, validation: 2835
+[fold2] train: 8505, validation: 2835
+[fold3] train: 8505, validation: 2835
+[Verify that train and validation are not covered]
+[fold0] True, True
+[fold1] True, True
+[fold2] True, True
+[fold3] True, True
+====================================================================================================
+[Verify that train/validation and test are not covered]
+[fold0] True
+[fold1] True
+[fold2] True
+[fold3] True
+====================================================================================================
+Finish
