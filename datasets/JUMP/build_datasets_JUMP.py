@@ -216,13 +216,13 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('root_path', type=str, help='set data root path')
-    parser.add_argument('save_path', type=str, help='set built dataset save path')
-    parser.add_argument('test_ratio', type=float, help='set test dataset ratio')
-    parser.add_argument('test_split_mode', type=str, choices=['wellplate', 'well', 'random'],
+    parser.add_argument('--root_path', type=str, help='set data root path')
+    parser.add_argument('--save_path', type=str, help='set built dataset save path')
+    parser.add_argument('--test_ratio', type=float, help='set test dataset ratio')
+    parser.add_argument('--test_split_mode', type=str, choices=['wellplate', 'well', 'random'],
                         help='choice test split mode [wellplate, well random]')
-    parser.add_argument('fold_num', type=int, help='set number of cross-validation fold')
-    parser.add_argument('seed', type=int, help='random seed', default=0)
+    parser.add_argument('--fold_num', type=int, help='set number of cross-validation fold')
+    parser.add_argument('--seed', type=int, help='random seed', default=0)
     args = parser.parse_args()
 
     main(args=args)
