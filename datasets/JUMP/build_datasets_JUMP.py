@@ -135,7 +135,9 @@ def main(args):
     print('='*100)
     if test_split_mode == 'wellplate':
         # select well plate path
-        test_well_plate_num = int(np.ceil(test_ratio*len(well_plate_path_list)))
+        test_well_plate_num = int(np.floor(test_ratio*len(well_plate_path_list)))
+        if test_well_plate_num == 0:
+            test_well_plate_num = 1
         test_well_plate_path_list = rg.choice(well_plate_path_list, test_well_plate_num).tolist()
 
         train_val_well_plate_path_list = []
@@ -159,7 +161,9 @@ def main(args):
         well_id_list = gather_well_id(filepath_list)
 
         # split well id
-        test_well_id_num = int(np.ceil(test_ratio*len(well_id_list)))
+        test_well_id_num = int(np.floor(test_ratio*len(well_id_list)))
+        if test_well_id_num == 0:
+            test_well_id_num = 1
         test_well_id_list = rg.choice(well_id_list, test_well_id_num).tolist()
 
         train_val_well_id_list = []
@@ -182,7 +186,9 @@ def main(args):
             filepath_list.append(filepaths)
 
         # split img_path
-        test_filepath_num = int(np.ceil(test_ratio*len(filepath_list)))
+        test_filepath_num = int(np.floor(test_ratio*len(filepath_list)))
+        if test_filepath_num == 0:
+            test_filepath_num = 1
         test_filepath_list = rg.choice(filepath_list, test_filepath_num).tolist()
 
         train_val_filepath_list = []
