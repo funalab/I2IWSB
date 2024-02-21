@@ -20,6 +20,8 @@ class DatasetWrapper(Dataset):
             self.input_channel_list = [line.rstrip() for line in f]
         with open(f"{root_path}/{output_channel_path}", 'r') as f:
             self.output_channel_list = [line.rstrip() for line in f]
+        with open(f"{root_path}/{channel_table_path}", 'r') as f:
+            self.channel_table = json.load(f)
         self.resize = resize
         self.convert_gray = convert_gray
         self.crop_size = crop_size
@@ -41,24 +43,32 @@ class DatasetWrapper(Dataset):
         return len(self.file_list)
 
     def _load_img(self, i, mode):
-        image = None
+
         if self.dataset_name == 'JUMP':
+            # set channel list
             if mode == 'input':
-                image = []
-                for channel in self.input_channel_list:
-                    path = f"{self.root_path}/{self.filepath_list[i]}-{channel}sk1fk1fl1.tif"
-                    img = io.imread(path)
-                    image.append(img)
-                image = np.stack(image, axis=2)
+                channel_list = self.input_channel_list
             elif mode == 'output':
-                image = []
-                for channel in self.output_channel_list:
-                    path = f"{self.root_path}/{self.filepath_list[i]}-{channel}sk1fk1fl1.tif"
-                    img = io.imread(path)
-                    image.append(img)
-                image = np.stack(image, axis=2)
+                channel_list = self.output_channel_list
             else:
                 raise CustomException(f"Invalid image mode : {mode}")
+
+            # concat images
+            image = []
+            for channel_id in channel_list:
+                img_path = f"{self.root_path}/images/{self.filepath_list[i]}-{channel_id}sk1fk1fl1.tif"
+                id = self.filepath_list[i][:10]
+                channel_name = self.channel_table[channel_id]
+                correction_path = f"{self.root_path}/illum/{id}/{id}_Illum{channel_name}.npy"
+
+                # Illumination correction
+                img = io.imread(img_path)
+                correction_function = np.load(correction_path, allow_pickle=True)
+                img_corrected = img / correction_function
+
+                image.append(img_corrected)
+            image = np.stack(image, axis=2)
+
         else:
             raise NotImplementedError
 
@@ -226,6 +236,7 @@ def get_dataset(args):
         root_path=str(args.root_path),
         input_channel_path=str(args.input_channel_path),
         output_channel_path=str(args.output_channel_path),
+        channel_table_path=str(args.channel_table_path),
         split_list=str(args.split_list_train),
         convert_gray=eval(args.convert_gray),
         resize=eval(args.resize) if hasattr(args, "resize") else None,
@@ -249,6 +260,7 @@ def get_dataset(args):
         root_path=str(args.root_path),
         input_channel_path=str(args.input_channel_path),
         output_channel_path=str(args.output_channel_path),
+        channel_table_path=str(args.channel_table_path),
         split_list=str(args.split_list_validation),
         convert_gray=eval(args.convert_gray),
         resize=eval(args.resize) if hasattr(args, "resize") else None,
@@ -278,6 +290,7 @@ def get_test_dataset(args):
         root_path=str(args.root_path),
         input_channel_path=str(args.input_channel_path),
         output_channel_path=str(args.output_channel_path),
+        channel_table_path=str(args.channel_table_path),
         split_list=str(args.split_list_test),
         convert_gray=eval(args.convert_gray),
         resize=eval(args.resize) if hasattr(args, "resize") else None,

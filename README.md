@@ -56,9 +56,9 @@ model_dir = results/trial/*
 ### (3) Run experiments
 holdout
 ```shell
-bash scripts/gan/holdout.sh confs/debug/gan fold1
+bash scripts/gan/holdout.sh confs/debug/gan/cwgangp fold1
 ```
 cross validation
 ```shell
-bash scripts/gan/cross_validation.sh confs/debug/gan 
+bash scripts/gan/cross_validation.sh confs/debug/gan/cwgangp 
 ```
