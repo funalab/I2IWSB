@@ -61,3 +61,15 @@ aws s3 ls s3://cellpainting-gallery/cpg0000-jump-pilot/source_4/images/2020_11_0
 
 #### 3. Check data
 please check data using ```../notebooks/JUMP_visualization.ipynb```
+
+
+#### 4. Build datasets
+```shell
+python build_datasets_JUMP.py --root_path <path> --save_path <save_path> --test_ratio <test_ratio> \
+                              --test_split_mode <test_split_mode> --fold_num <fold_num>
+```
+- ```root_path```: data root path
+- ```save_path```: save path
+- ```test_ratio```: test dataset ratio
+- ```test_split_mode```: split mode (choose wellplate, well or random)
+- ```fold_num```: number of cross-validation fold

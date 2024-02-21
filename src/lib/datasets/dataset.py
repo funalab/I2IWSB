@@ -56,7 +56,7 @@ class DatasetWrapper(Dataset):
             # concat images
             image = []
             for channel_id in channel_list:
-                img_path = f"{self.root_path}/images/{self.filepath_list[i]}-{channel_id}sk1fk1fl1.tif"
+                img_path = f"{self.root_path}/images/{self.filepath_list[i]}-{channel_id}sk1fk1fl1.tiff"
                 id = self.filepath_list[i][:10]
                 channel_name = self.channel_table[channel_id]
                 correction_path = f"{self.root_path}/illum/{id}/{id}_Illum{channel_name}.npy"
