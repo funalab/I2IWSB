@@ -39,12 +39,12 @@ pip3 install -r requirements.txt
 原則，cfgファイルでハイパーパラメータや設定を管理
 学習済みモデルはcfgファイルのsave_dir に記述したディレクトリに best_model.pthとして保存される。 
 ```shell
-python src/tools/gan/train.py --conf_file confs/debug/train.cfg
+python src/tools/gan/train.py --conf_file confs/debug/gan/cwgangp/train_fold1.cfg
 ```
 #### Test
 テストしたい学習済みモデルのパスをcfgファイルのmodel_dir に指定。
 ```shell
-python src/tools/gan/test.py --conf_file confs/debug/test.cfg
+python src/tools/gan/test.py --conf_file confs/debug/gan/cwgangp/test.cfg
 ```
 
 ただし、model_dirに下記のようなワイルドカードを設定することで、設定条件に適したfolderからbestな条件を自動探索することも可能
