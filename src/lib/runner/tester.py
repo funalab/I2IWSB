@@ -2005,6 +2005,8 @@ class cWSBGPTester(object):
                 fake_imgs_for_evaluate = torch.unsqueeze(fake_imgs_for_evaluate[evaluate_idx, :, :, :], axis=0)
                 reals = torch.cat((x1, x0), 1)
                 fakes = torch.cat((fake_imgs_for_evaluate, x0), 1)
+                print(fake_imgs_for_evaluate.min(),fake_imgs_for_evaluate.max())
+                print(x1.min(),x1.max())
                 loss_mse = F.mse_loss(fake_imgs_for_evaluate, x1)
             else:
                 reals = torch.cat((label, x0), 1)
