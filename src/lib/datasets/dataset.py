@@ -16,7 +16,7 @@ class DatasetWrapper(Dataset):
     def __init__(self,  dataset_name, root_path, dataset_path, split_list, input_channel_path, output_channel_path,
                  channel_table_path, resize, convert_gray, crop_size, crop_range, crop_augmentation, rotation_augmentation,
                  normalization, image_dtype, data_range, in_channels, out_channels, image_size, model_name,
-                 dim_match, input_dim_label, output_dim_label, concat_channels_process_num):
+                 dim_match, input_dim_label, output_dim_label):
         self.dataset_name = dataset_name
         self.root_path = root_path
         self.dataset_path = dataset_path
@@ -44,7 +44,6 @@ class DatasetWrapper(Dataset):
         self.dim_match = dim_match
         self.input_dim_label = input_dim_label
         self.output_dim_label = output_dim_label
-        self.concat_channels_process_num = concat_channels_process_num
 
     def __len__(self):
         return len(self.filepath_list)
@@ -265,7 +264,6 @@ def get_dataset(args):
         dim_match=eval(args.dim_match) if hasattr(args, 'dim_match') else False,
         input_dim_label=eval(args.input_dim_label) if hasattr(args, 'input_dim_label') else None,
         output_dim_label=eval(args.output_dim_label) if hasattr(args, 'output_dim_label') else None,
-        concat_channels_process_num=int(args.concat_channels_process_num) if hasattr(args, 'concat_channels_process_num') else 1,
     )
     validation_dataset = DatasetWrapper(
         dataset_name=str(args.dataset_name),
@@ -291,7 +289,6 @@ def get_dataset(args):
         dim_match=eval(args.dim_match) if hasattr(args, 'dim_match') else False,
         input_dim_label=eval(args.input_dim_label) if hasattr(args, 'input_dim_label') else None,
         output_dim_label=eval(args.output_dim_label) if hasattr(args, 'output_dim_label') else None,
-        concat_channels_process_num=int(args.concat_channels_process_num) if hasattr(args, 'concat_channels_process_num') else 1,
     )
     print('-- train_dataset.size = {}\n-- validation_dataset.size = {}'.format(
         train_dataset.__len__(), validation_dataset.__len__()))
@@ -323,7 +320,6 @@ def get_test_dataset(args):
         dim_match=eval(args.dim_match) if hasattr(args, 'dim_match') else False,
         input_dim_label=eval(args.input_dim_label) if hasattr(args, 'input_dim_label') else None,
         output_dim_label=eval(args.output_dim_label) if hasattr(args, 'output_dim_label') else None,
-        concat_channels_process_num=int(args.concat_channels_process_num) if hasattr(args, 'concat_channels_process_num') else 1,
     )
     print('-- test_dataset.size = {}'.format(test_dataset.__len__()))
     return test_dataset
