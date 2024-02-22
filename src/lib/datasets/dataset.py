@@ -52,7 +52,7 @@ class DatasetWrapper(Dataset):
     def _load_img(self, i, mode):
         def _correct_image(root_path, filepath, channel_id, channel_table):
             img_path = f"{root_path}/images/{filepath}-{channel_id}sk1fk1fl1.tiff"
-            id = filepath[i][:10]
+            id = filepath[:10]
             channel_name = channel_table[channel_id]
             correction_path = f"{root_path}/illum/{id}/{id}_Illum{channel_name}.npy"
 
