@@ -81,7 +81,8 @@ class DatasetWrapper(Dataset):
                     image_list.append(img_concated)
             else:
                 p = Pool(self.concat_channels_process_num)
-                inputs = [(self.root_path, self.filepath_list[i], channel_id, self.channel_table) for i, channel_id in enumerate(channel_list)]
+                inputs = [(self.root_path, self.filepath_list[i], channel_id, self.channel_table)
+                          for i, channel_id in enumerate(channel_list)]
                 image_list = p.map(_concat_channels, inputs)
 
             image = np.stack(image_list, axis=2)
