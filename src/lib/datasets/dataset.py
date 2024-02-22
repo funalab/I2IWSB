@@ -224,8 +224,7 @@ class DatasetWrapper(Dataset):
         # dimension matching
         if self.dim_match:
             image_source, image_target = self._dim_matching(image_source=image_source, image_target=image_target)
-        print(image_source.max(), image_source.min())
-        print(image_target.max(), image_target.min())
+
         return image_source, image_target
 
     def __getitem__(self, i):
