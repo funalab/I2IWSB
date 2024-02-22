@@ -49,6 +49,17 @@ class DatasetWrapper(Dataset):
         return len(self.filepath_list)
 
     def _load_img(self, i, mode):
+        def _concat_channels(root_path, filepath, channel_id, channel_table):
+            img_path = f"{root_path}/images/{filepath}-{channel_id}sk1fk1fl1.tiff"
+            id = filepath[i][:10]
+            channel_name = channel_table[channel_id]
+            correction_path = f"{root_path}/illum/{id}/{id}_Illum{channel_name}.npy"
+
+            # Illumination correction
+            img = io.imread(img_path)
+            correction_function = np.load(correction_path, allow_pickle=True)
+            img_corrected = img / correction_function
+            return img_corrected
 
         if self.dataset_name == 'JUMP':
             # set channel list
@@ -60,21 +71,20 @@ class DatasetWrapper(Dataset):
                 raise CustomException(f"Invalid image mode : {mode}")
 
             # concat images
-            image = []
-            for channel_id in channel_list:
-                img_path = f"{self.root_path}/images/{self.filepath_list[i]}-{channel_id}sk1fk1fl1.tiff"
-                id = self.filepath_list[i][:10]
-                channel_name = self.channel_table[channel_id]
-                correction_path = f"{self.root_path}/illum/{id}/{id}_Illum{channel_name}.npy"
+            if self.concat_channels_process_num == 1:
+                image_list = []
+                for channel_id in channel_list:
+                    img_concated = _concat_channels(root_path=self.root_path,
+                                                    filepath=self.filepath_list[i],
+                                                    channel_id=channel_id,
+                                                    channel_table=self.channel_table)
+                    image_list.append(img_concated)
+            else:
+                p = Pool(self.concat_channels_process_num)
+                inputs = [(self.root_path, self.filepath_list[i], channel_id, self.channel_table) for i, channel_id in enumerate(channel_list)]
+                image_list = p.map(_concat_channels, inputs)
 
-                # Illumination correction
-                img = io.imread(img_path)
-                correction_function = np.load(correction_path, allow_pickle=True)
-                img_corrected = img / correction_function
-
-                image.append(img_corrected)
-            image = np.stack(image, axis=2)
-
+            image = np.stack(image_list, axis=2)
         else:
             raise NotImplementedError
 
