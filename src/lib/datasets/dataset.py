@@ -77,9 +77,9 @@ class DatasetWrapper(Dataset):
                 image_list = []
                 for channel_id in channel_list:
                     img_concated = concat_channels(root_path=self.root_path,
-                                                    filepath=self.filepath_list[i],
-                                                    channel_id=channel_id,
-                                                    channel_table=self.channel_table)
+                                                   filepath=self.filepath_list[i],
+                                                   channel_id=channel_id,
+                                                   channel_table=self.channel_table)
                     image_list.append(img_concated)
             else:
                 p = Pool(self.concat_channels_process_num)
