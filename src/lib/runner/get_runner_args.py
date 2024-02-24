@@ -83,7 +83,7 @@ def get_test_args_DF(args, save_dir, device, test_dataset):
     tester_args = {
         'model': str(args.model),
         'save_dir': save_dir,
-        'file_list': test_dataset.file_list,
+        'file_list': test_dataset.filepath_list,
         'in_channels': int(args.in_channels),
         'out_channels': int(args.out_channels),
         'input_channel_list': test_dataset.input_channel_list,
@@ -155,7 +155,7 @@ def get_test_args(args, save_dir, device, test_dataset):
     tester_args = {
         'model': str(args.model),
         'save_dir': save_dir,
-        'file_list': test_dataset.file_list,
+        'file_list': test_dataset.filepath_list,
         'input_channel_list': test_dataset.input_channel_list,
         'output_channel_list': test_dataset.output_channel_list,
         'batch_size': int(args.val_batchsize),
@@ -232,7 +232,7 @@ def get_test_args_WSB(args, save_dir, device, test_dataset):
     tester_args = {
         'model': str(args.model),
         'save_dir': save_dir,
-        'file_list': test_dataset.file_list,
+        'file_list': test_dataset.filepath_list,
         'in_channels': int(args.in_channels),
         'out_channels': int(args.out_channels),
         'input_channel_list': test_dataset.input_channel_list,
