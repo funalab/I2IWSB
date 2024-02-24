@@ -126,6 +126,9 @@ def get_test_args_DF(args, save_dir, device, test_dataset):
         if hasattr(args, 'output_dim_label'):
             tester_args['output_dim_label'] = eval(args.output_dim_label)
 
+    if hasattr(args, 'test_num_workers'):
+        tester_args['test_num_workers'] = int(args.test_num_workers)
+
     return tester_args
 
 def get_train_args(args, optimizer, scheduler, save_dir, device):
@@ -175,6 +178,10 @@ def get_test_args(args, save_dir, device, test_dataset):
 
     if str(args.model) == 'cWGAN-GP':
         tester_args['lamb'] = str(args.lamb)  # gradient penaltyの強さ
+
+    if hasattr(args, 'test_num_workers'):
+        tester_args['test_num_workers'] = int(args.test_num_workers)
+
     return tester_args
 
 def get_train_args_WSB(args, optimizer_G, optimizer_D, scheduler_G, scheduler_D, save_dir, device):
@@ -273,4 +280,6 @@ def get_test_args_WSB(args, save_dir, device, test_dataset):
     else:
         raise NotImplementedError(f"{str(args.model)}")
 
+    if hasattr(args, 'test_num_workers'):
+        tester_args['test_num_workers'] = int(args.test_num_workers)
     return tester_args
