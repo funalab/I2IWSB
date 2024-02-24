@@ -9,8 +9,8 @@ import torch.nn.functional as F
 import collections
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 from sklearn import metrics
-from multiprocessing import Pool
 import torch.nn as nn
 import torch.autograd as autograd
 from PIL import Image
@@ -58,10 +58,6 @@ class cWGANGPTester(object):
         self.data_range = kwargs['data_range']
         self.normalization = kwargs['normalization']
 
-        self.test_num_workers = kwargs['test_num_workers'] if 'test_num_workers' in kwargs else 4
-
-    def _wrapper_test_func(self, args):
-        return self._test_func(*args)
 
     def _test_func(self, data, model_G, model_D, epoch, phase, save_dir_img, cnt):
         input_real, output_real = data
@@ -175,29 +171,20 @@ class cWGANGPTester(object):
 
         # predict
         if phase == 'test':
-            p = Pool(self.test_num_workers)
-            inputs = [(data, model_G, model_D, epoch, phase, save_dir_img, i) for i, data in enumerate(data_iter)]
-            outputs = p.map(self._wrapper_test_func, inputs)
-            for output in outputs:
-                loss_G, loss_D, ssims, mses, maes, psnrs = output
-                # save results
-                loss_D_list.append(loss_D.to(torch.device('cpu')).detach().numpy())
-                loss_G_list.append(loss_G.to(torch.device('cpu')).detach().numpy())
-                ssim_list += ssims
-                mse_list += mses
-                mae_list += maes
-                psnr_list += psnrs
+            tqdm_disable = False
         else:
-            for i, data in enumerate(data_iter):
-                output = self._test_func(data, model_G, model_D, epoch, phase, save_dir_img, i)
-                loss_G, loss_D, ssims, mses, maes, psnrs = output
-                # save results
-                loss_D_list.append(loss_D.to(torch.device('cpu')).detach().numpy())
-                loss_G_list.append(loss_G.to(torch.device('cpu')).detach().numpy())
-                ssim_list += ssims
-                mse_list += mses
-                mae_list += maes
-                psnr_list += psnrs
+            tqdm_disable = True
+
+        for i, data in enumerate(tqdm(data_iter, disable=tqdm_disable)):
+            output = self._test_func(data, model_G, model_D, epoch, phase, save_dir_img, i)
+            loss_G, loss_D, ssims, mses, maes, psnrs = output
+            # save results
+            loss_D_list.append(loss_D.to(torch.device('cpu')).detach().numpy())
+            loss_G_list.append(loss_G.to(torch.device('cpu')).detach().numpy())
+            ssim_list += ssims
+            mse_list += mses
+            mae_list += maes
+            psnr_list += psnrs
 
         evaluates_dict = {
             "ssim": ssim_list,
@@ -382,7 +369,6 @@ class guidedI2ITester(object):
         self.eval_metrics = kwargs['eval_metrics'] if 'eval_metrics' in kwargs else None
         self.lossfun = kwargs['lossfun'] if 'lossfun' in kwargs else None
 
-        self.test_num_workers = kwargs['test_num_workers'] if 'test_num_workers' in kwargs else 4
 
     def _parse_data(self, data):
         image_source, image_target, weak_label = data
@@ -472,9 +458,6 @@ class guidedI2ITester(object):
             return torch.tensor(loss), None, None
 
 
-    def _wrapper_test_func(self, args):
-        return self._test_func(*args)
-
     def _test_func(self, data, model, phase, save_dir_img, cnt):
         # parse data
         input_real, real_imgs, weak_label, batch_size = self._parse_data(data=data)
@@ -535,29 +518,20 @@ class guidedI2ITester(object):
 
         # predict
         if phase == 'test':
-            p = Pool(self.test_num_workers)
-            inputs = [(data, model, phase, save_dir_img, i) for i, data in enumerate(data_iter)]
-            outputs = p.map(self._wrapper_test_func, inputs)
-            for output in outputs:
-                loss, ssims, mses, maes, psnrs = output
-                # save results
-                loss_list.append(loss.to(torch.device('cpu')).clone().detach().numpy())
-                if self._check_flag(phase=phase):
-                    ssim_list += ssims
-                    mse_list += mses
-                    mae_list += maes
-                    psnr_list += psnrs
+            tqdm_disable = False
         else:
-            for i, data in enumerate(data_iter):
-                output = self._test_func(data, model, phase, save_dir_img, i)
-                loss, ssims, mses, maes, psnrs = output
-                # save results
-                loss_list.append(loss.to(torch.device('cpu')).clone().detach().numpy())
-                if self._check_flag(phase=phase):
-                    ssim_list += ssims
-                    mse_list += mses
-                    mae_list += maes
-                    psnr_list += psnrs
+            tqdm_disable = True
+
+        for i, data in enumerate(tqdm(data_iter, disable=tqdm_disable)):
+            output = self._test_func(data, model, phase, save_dir_img, i)
+            loss, ssims, mses, maes, psnrs = output
+            # save results
+            loss_list.append(loss.to(torch.device('cpu')).clone().detach().numpy())
+            if self._check_flag(phase=phase):
+                ssim_list += ssims
+                mse_list += mses
+                mae_list += maes
+                psnr_list += psnrs
 
         if self._check_flag(phase=phase):
             evaluates_dict = {
@@ -834,7 +808,6 @@ class I2SBTester(object):
         self.output_dim_label = kwargs['output_dim_label'] if 'output_dim_label' in kwargs else None
         self.distributed = kwargs['distributed'] if 'distributed' in kwargs else False
 
-        self.test_num_workers = kwargs['test_num_workers'] if 'test_num_workers' in kwargs else 4
 
     def sample_batch(self, data):
         # clean_img is "target" domain and corrupt_img is "source" domain
@@ -967,9 +940,6 @@ class I2SBTester(object):
         else:
             return torch.tensor(loss), None, None
 
-    def _wrapper_test_func(self, args):
-        return self._test_func(*args)
-
     def _test_func(self, data, model, phase, save_dir_img, cnt):
         # parse data
         # x0 target, x1 source
@@ -1056,30 +1026,21 @@ class I2SBTester(object):
 
         # predict
         if phase == 'test':
-            p = Pool(self.test_num_workers)
-            inputs = [(data, model, phase, save_dir_img, i) for i, data in enumerate(data_iter)]
-            outputs = p.map(self._wrapper_test_func, inputs)
-            for output in outputs:
-                loss, ssims, mses, maes, psnrs = output
-                # save results
-                loss_list.append(loss.to(torch.device('cpu')).clone().detach().numpy())
-                if self._check_flag(phase=phase):
-                    ssim_list += ssims
-                    mse_list += mses
-                    mae_list += maes
-                    psnr_list += psnrs
+            tqdm_disable = False
         else:
-            for i, data in enumerate(data_iter):
-                output = self._test_func(data, model, phase, save_dir_img, i)
-                loss, ssims, mses, maes, psnrs = output
+            tqdm_disable = True
 
-                # save results
-                loss_list.append(loss.to(torch.device('cpu')).clone().detach().numpy())
-                if self._check_flag(phase=phase):
-                    ssim_list += ssims
-                    mse_list += mses
-                    mae_list += maes
-                    psnr_list += psnrs
+        for i, data in enumerate(tqdm(data_iter, disable=tqdm_disable)):
+            output = self._test_func(data, model, phase, save_dir_img, i)
+            loss, ssims, mses, maes, psnrs = output
+
+            # save results
+            loss_list.append(loss.to(torch.device('cpu')).clone().detach().numpy())
+            if self._check_flag(phase=phase):
+                ssim_list += ssims
+                mse_list += mses
+                mae_list += maes
+                psnr_list += psnrs
 
         if self._check_flag(phase=phase):
             evaluates_dict = {
@@ -1439,8 +1400,6 @@ class PaletteTester(object):
         self.input_dim_label = kwargs['input_dim_label'] if 'input_dim_label' in kwargs else None
         self.output_dim_label = kwargs['output_dim_label'] if 'output_dim_label' in kwargs else None
 
-        self.test_num_workers = kwargs['test_num_workers'] if 'test_num_workers' in kwargs else 4
-
     def _parse_data(self, data):
         image_source, image_target = data
         image_source = image_source.to(torch.device(self.device))
@@ -1520,9 +1479,6 @@ class PaletteTester(object):
         else:
             return torch.tensor(loss), None, None
 
-    def _wrapper_test_func(self,args):
-        return self._test_func(*args)
-
     def _test_func(self, data, model, phase, save_dir_img, cnt):
         # parse data
         input_real, real_imgs, batch_size = self._parse_data(data=data)
@@ -1591,30 +1547,21 @@ class PaletteTester(object):
 
         # predict
         if phase == 'test':
-            p = Pool(self.test_num_workers)
-            inputs = [(data, model, phase, save_dir_img, i) for i, data in enumerate(data_iter)]
-            outputs = p.map(self._wrapper_test_func, inputs)
-            for output in outputs:
-                loss, ssims, mses, maes, psnrs = output
-                # save results
-                loss_list.append(loss.to(torch.device('cpu')).clone().detach().numpy())
-                if self._check_flag(phase=phase):
-                    ssim_list += ssims
-                    mse_list += mses
-                    mae_list += maes
-                    psnr_list += psnrs
+            tqdm_disable = False
         else:
-            for i, data in enumerate(data_iter):
-                output = self._test_func(data, model, phase, save_dir_img, i)
-                loss, ssims, mses, maes, psnrs = output
+            tqdm_disable = True
 
-                # save results
-                loss_list.append(loss.to(torch.device('cpu')).clone().detach().numpy())
-                if self._check_flag(phase=phase):
-                    ssim_list += ssims
-                    mse_list += mses
-                    mae_list += maes
-                    psnr_list += psnrs
+        for i, data in enumerate(tqdm(data_iter, disable=tqdm_disable)):
+            output = self._test_func(data, model, phase, save_dir_img, i)
+            loss, ssims, mses, maes, psnrs = output
+
+            # save results
+            loss_list.append(loss.to(torch.device('cpu')).clone().detach().numpy())
+            if self._check_flag(phase=phase):
+                ssim_list += ssims
+                mse_list += mses
+                mae_list += maes
+                psnr_list += psnrs
 
         if self._check_flag(phase=phase):
             evaluates_dict = {
@@ -1905,8 +1852,6 @@ class cWSBGPTester(object):
         self.output_dim_label = kwargs['output_dim_label'] if 'output_dim_label' in kwargs else None
         self.distributed = kwargs['distributed'] if 'distributed' in kwargs else False
 
-        self.test_num_workers = kwargs['test_num_workers'] if 'test_num_workers' in kwargs else 4
-
     def sample_batch(self, data):
         # clean_img is "target" domain and corrupt_img is "source" domain
         img_source, img_target = data
@@ -2038,8 +1983,6 @@ class cWSBGPTester(object):
         else:
             return torch.tensor(loss), None, None
 
-    def _wrapper_test_func(self, args):
-        return self._test_func(*args)
 
     def _test_func(self, data, model_G, model_D, epoch, phase, save_dir_img, cnt):
         # parse data
@@ -2163,33 +2106,22 @@ class cWSBGPTester(object):
 
         # predict
         if phase == 'test':
-            p = Pool(self.test_num_workers)
-            inputs = [(data, model_G, model_D, epoch, phase, save_dir_img, i) for i, data in enumerate(data_iter)]
-            outputs = p.map(self._wrapper_test_func, inputs)
-            for output in outputs:
-                loss_mse, loss_G, loss_D, ssims, mses, maes, psnrs = output
-                # save results
-                loss_mse_list.append(loss_mse.to(torch.device('cpu')).detach().numpy())
-                loss_D_list.append(loss_D.to(torch.device('cpu')).detach().numpy())
-                loss_G_list.append(loss_G.to(torch.device('cpu')).detach().numpy())
-                if self._check_flag(phase=phase):
-                    ssim_list += ssims
-                    mse_list += mses
-                    mae_list += maes
-                    psnr_list += psnrs
+            tqdm_disable = False
         else:
-            for i, data in enumerate(data_iter):
-                output = self._test_func(data, model_G, model_D, epoch, phase, save_dir_img, i)
-                loss_mse, loss_G, loss_D, ssims, mses, maes, psnrs = output
-                # save results
-                loss_mse_list.append(loss_mse.to(torch.device('cpu')).detach().numpy())
-                loss_D_list.append(loss_D.to(torch.device('cpu')).detach().numpy())
-                loss_G_list.append(loss_G.to(torch.device('cpu')).detach().numpy())
-                if self._check_flag(phase=phase):
-                    ssim_list += ssims
-                    mse_list += mses
-                    mae_list += maes
-                    psnr_list += psnrs
+            tqdm_disable = True
+
+        for i, data in enumerate(tqdm(data_iter, disable=tqdm_disable)):
+            output = self._test_func(data, model_G, model_D, epoch, phase, save_dir_img, i)
+            loss_mse, loss_G, loss_D, ssims, mses, maes, psnrs = output
+            # save results
+            loss_mse_list.append(loss_mse.to(torch.device('cpu')).detach().numpy())
+            loss_D_list.append(loss_D.to(torch.device('cpu')).detach().numpy())
+            loss_G_list.append(loss_G.to(torch.device('cpu')).detach().numpy())
+            if self._check_flag(phase=phase):
+                ssim_list += ssims
+                mse_list += mses
+                mae_list += maes
+                psnr_list += psnrs
 
         evaluates_dict = None
         if self._check_flag(phase=phase):
