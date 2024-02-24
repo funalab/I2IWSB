@@ -2344,7 +2344,6 @@ class cWSBGPTester(object):
                                                                  data_range=self.data_range,
                                                                  image_dtype=self.image_dtype)
                         print(composite.dtype)
-                        print(composite)
                         io.imsave(f"{save_dir_img_each_composite}/{name}.png",
                                   composite,
                                   check_contrast=False)
