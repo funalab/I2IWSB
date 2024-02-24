@@ -5,7 +5,7 @@ path=$1
 name=$2
 
 # run train
-python src/tools/diffusion/train.py --conf_file $path/train/$name.cfg
+python src/tools/diffusion/train.py --conf_file $path/train_$name.cfg
 
 # run test
 test_result=$(python src/tools/diffusion/test.py --conf_file $path/test.cfg | tee /dev/tty)
