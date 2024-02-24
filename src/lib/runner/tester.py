@@ -12,10 +12,11 @@ import pandas as pd
 from sklearn import metrics
 import torch.nn as nn
 import torch.autograd as autograd
+from PIL import Image
 from torch.autograd import Variable
 from matplotlib import pyplot as plt
 from src.lib.datasets.augmentations import image_sliding_crop, concatinate_slides, numpy2tensor, tensor2numpy
-from src.lib.utils.utils import check_dir, convert_channels_to_rgbs
+from src.lib.utils.utils import check_dir, convert_channels_to_rgbs, save_image_function
 from src.lib.losses.losses import GenLoss
 from skimage import io
 import imageio
@@ -157,9 +158,9 @@ class cWGANGPTester(object):
                     save_dir_img_each = check_dir(f"{save_dir_img}/{self.file_list[cnt]}")
                     for channel_ind in range(len(self.output_channel_list)):
                         fake_imgs_image_channel = fake_imgs_image[:, :, channel_ind]
-                        io.imsave(f"{save_dir_img_each}/{self.output_channel_list[channel_ind]}.tif",
-                                  fake_imgs_image_channel,
-                                  check_contrast=False)
+                        save_image_function(save_dir=save_dir_img_each,
+                                            filename=self.output_channel_list[channel_ind],
+                                            img=fake_imgs_image_channel)
 
                     save_dir_img_each_composite = check_dir(f"{save_dir_img_each}/Composite")
                     composite = convert_channels_to_rgbs(images=fake_imgs_image,
@@ -168,10 +169,9 @@ class cWGANGPTester(object):
                                                          flag_artifact=True,
                                                          data_range=self.data_range,
                                                          image_dtype=self.image_dtype)
-                    io.imsave(f"{save_dir_img_each_composite}/Composite_{self.file_list[cnt]}.tif",
-                              composite,
-                              check_contrast=False)
-
+                    save_image_function(save_dir=save_dir_img_each_composite,
+                                        filename=f"Composite_{self.file_list[cnt]}",
+                                        img=composite)
             cnt += 1
 
         evaluates_dict = {
@@ -697,12 +697,14 @@ class guidedI2ITester(object):
                             channel_name = self.output_channel_list[channel]
                         else:
                             channel_name = channel
-                        io.imsave(f"{save_dir_each_b}/{names[i]}_channel_{channel_name}.png", im, check_contrast=False)
-
+                        save_image_function(save_dir=save_dir_each_b,
+                                            filename=f"{names[i]}_channel_{channel_name}",
+                                            img=im)
                     if im_out_b.shape[0] == 1 or im_out_b.shape[0] == 3:
                         im_out_b = self._convert_tensor_to_image(im_out_b)
-                        io.imsave(f"{save_dir_each_b}/{names[i]}.png", im_out_b, check_contrast=False)
-
+                        save_image_function(save_dir=save_dir_each_b,
+                                            filename=f"{names[i]}",
+                                            img=im_out_b)
                 else:
                     im_out_b = im_out.copy()
 
@@ -714,11 +716,14 @@ class guidedI2ITester(object):
                             channel_name = self.output_channel_list[channel]
                         else:
                             channel_name = channel
-                        io.imsave(f"{save_dir_each}/{names[i]}_channel_{channel_name}.png", im, check_contrast=False)
-
+                        save_image_function(save_dir=save_dir_each,
+                                            filename=f"{names[i]}_channel_{channel_name}",
+                                            img=im)
                     if im_out_b.shape[0] == 1 or im_out_b.shape[0] == 3:
                         im_out_b = self._convert_tensor_to_image(im_out_b)
-                        io.imsave(f"{save_dir_each}/{names[i]}.png", im_out_b, check_contrast=False)
+                        save_image_function(save_dir=save_dir_each,
+                                            filename=f"{names[i]}",
+                                            img=im_out_b)
                     else:
                         save_dir_img_each_composite = check_dir(f"{save_dir_each}/Composite")
                         composite = convert_channels_to_rgbs(images=self._convert_tensor_to_image(im_out_b),
@@ -727,10 +732,9 @@ class guidedI2ITester(object):
                                                              flag_artifact=True,
                                                              data_range=self.data_range,
                                                              image_dtype=self.image_dtype)
-                        io.imsave(f"{save_dir_img_each_composite}/{names[i]}.png",
-                                  composite,
-                                  check_contrast=False)
-
+                        save_image_function(save_dir=save_dir_img_each_composite,
+                                            filename=f"{names[i]}",
+                                            img=composite)
 
 def make_beta_schedule_for_I2SB(n_timestep=1000, linear_start=1e-4, linear_end=2e-2):
     # return np.linspace(linear_start, linear_end, n_timestep)
@@ -1232,11 +1236,14 @@ class I2SBTester(object):
                             channel_name = self.output_channel_list[channel]
                         else:
                             channel_name = channel
-                        io.imsave(f"{save_dir_each}/{name}_channel_{channel_name}.png", im, check_contrast=False)
-
+                        save_image_function(save_dir=save_dir_each,
+                                            filename=f"{name}_channel_{channel_name}",
+                                            img=im)
                     if im_out_b.shape[0] == 1 or im_out_b.shape[0] == 3:
                         im_out_b = self._convert_tensor_to_image(im_out_b)
-                        io.imsave(f"{save_dir_each}/{name}.png", im_out_b, check_contrast=False)
+                        save_image_function(save_dir=save_dir_each,
+                                            filename=f"{name}",
+                                            img=im_out_b)
                     else:
                         save_dir_img_each_composite = check_dir(f"{save_dir_each}/Composite")
 
@@ -1262,9 +1269,9 @@ class I2SBTester(object):
                                                                  data_range=self.data_range,
                                                                  image_dtype=self.image_dtype)
 
-                        io.imsave(f"{save_dir_img_each_composite}/{name}.png",
-                                  composite,
-                                  check_contrast=False)
+                        save_image_function(save_dir=save_dir_img_each_composite,
+                                            filename=f"{name}",
+                                            img=composite)
                 else:
                     im_out_b = data[b, :, :, :].detach().clone().cpu()
 
@@ -1279,11 +1286,14 @@ class I2SBTester(object):
                             channel_name = self.output_channel_list[channel]
                         else:
                             channel_name = channel
-                        io.imsave(f"{save_dir_each_b}/{name}_channel_{channel_name}.png", im, check_contrast=False)
-
+                        save_image_function(save_dir=save_dir_each_b,
+                                            filename=f"{name}_channel_{channel_name}",
+                                            img=im)
                     if im_out_b.shape[0] == 1 or im_out_b.shape[0] == 3:
                         im_out_b = self._convert_tensor_to_image(im_out_b)
-                        io.imsave(f"{save_dir_each_b}/{name}.png", im_out_b, check_contrast=False)
+                        save_image_function(save_dir=save_dir_each_b,
+                                            filename=f"{name}",
+                                            img=im_out_b)
                     else:
                         save_dir_img_each_composite = check_dir(f"{save_dir_each_b}/Composite")
                         if self.dim_match and self.output_dim_label is not None:
@@ -1308,10 +1318,9 @@ class I2SBTester(object):
                                                                  data_range=self.data_range,
                                                                  image_dtype=self.image_dtype)
 
-                        io.imsave(f"{save_dir_img_each_composite}/{name}.png",
-                                  composite,
-                                  check_contrast=False)
-
+                        save_image_function(save_dir=save_dir_img_each_composite,
+                                            filename=f"{name}",
+                                            img=composite)
         name = os.path.splitext(os.path.basename(path))[0]
         save_dir_each = check_dir(f"{save_dir}/{name}")
 
@@ -1704,12 +1713,14 @@ class PaletteTester(object):
                             channel_name = self.output_channel_list[channel]
                         else:
                             channel_name = channel
-                        io.imsave(f"{save_dir_each_b}/{names[i]}_channel_{channel_name}.png", im, check_contrast=False)
-
+                        save_image_function(save_dir=save_dir_each_b,
+                                            filename=f"{names[i]}_channel_{channel_name}",
+                                            img=im)
                     if im_out_b.shape[0] == 1 or im_out_b.shape[0] == 3:
                         im_out_b = self._convert_tensor_to_image(im_out_b)
-                        io.imsave(f"{save_dir_each_b}/{names[i]}.png", im_out_b, check_contrast=False)
-
+                        save_image_function(save_dir=save_dir_each_b,
+                                            filename=f"{names[i]}",
+                                            img=im_out_b)
                 else:
                     im_out_b = im_out.copy()
 
@@ -1721,11 +1732,14 @@ class PaletteTester(object):
                             channel_name = self.output_channel_list[channel]
                         else:
                             channel_name = channel
-                        io.imsave(f"{save_dir_each}/{names[i]}_channel_{channel_name}.png", im, check_contrast=False)
-
+                        save_image_function(save_dir=save_dir_each,
+                                            filename=f"{names[i]}_channel_{channel_name}",
+                                            img=im)
                     if im_out_b.shape[0] == 1 or im_out_b.shape[0] == 3:
                         im_out_b = self._convert_tensor_to_image(im_out_b)
-                        io.imsave(f"{save_dir_each}/{names[i]}.png", im_out_b, check_contrast=False)
+                        save_image_function(save_dir=save_dir_each,
+                                            filename=f"{names[i]}",
+                                            img=im_out_b)
                     else:
                         save_dir_img_each_composite = check_dir(f"{save_dir_each}/Composite")
 
@@ -1751,10 +1765,9 @@ class PaletteTester(object):
                                                                  data_range=self.data_range,
                                                                  image_dtype=self.image_dtype)
 
-                        io.imsave(f"{save_dir_img_each_composite}/{names[i]}.png",
-                                  composite,
-                                  check_contrast=False)
-
+                        save_image_function(save_dir=save_dir_img_each_composite,
+                                            filename=f"{names[i]}",
+                                            img=composite)
 
 '''
 cWSB-GP
@@ -2315,11 +2328,14 @@ class cWSBGPTester(object):
                             channel_name = self.output_channel_list[channel]
                         else:
                             channel_name = channel
-                        io.imsave(f"{save_dir_each}/{name}_channel_{channel_name}.png", im, check_contrast=False)
-
+                        save_image_function(save_dir=save_dir_each,
+                                            filename=f"{name}_channel_{channel_name}",
+                                            img=im)
                     if im_out_b.shape[0] == 1 or im_out_b.shape[0] == 3:
                         im_out_b = self._convert_tensor_to_image(im_out_b)
-                        io.imsave(f"{save_dir_each}/{name}.png", im_out_b, check_contrast=False)
+                        save_image_function(save_dir=save_dir_each,
+                                            filename=f"{name}",
+                                            img=im_out_b)
                     else:
                         save_dir_img_each_composite = check_dir(f"{save_dir_each}/Composite")
 
@@ -2343,10 +2359,9 @@ class cWSBGPTester(object):
                                                                  flag_artifact=True,
                                                                  data_range=self.data_range,
                                                                  image_dtype=self.image_dtype)
-                        print(composite.dtype)
-                        io.imsave(f"{save_dir_img_each_composite}/{name}.png",
-                                  composite,
-                                  check_contrast=False)
+                        save_image_function(save_dir=save_dir_img_each_composite,
+                                            filename=f"{name}",
+                                            img=composite)
                 else:
                     im_out_b = data[b, :, :, :].detach().clone().cpu()
 
@@ -2361,11 +2376,14 @@ class cWSBGPTester(object):
                             channel_name = self.output_channel_list[channel]
                         else:
                             channel_name = channel
-                        io.imsave(f"{save_dir_each_b}/{name}_channel_{channel_name}.png", im, check_contrast=False)
-
+                        save_image_function(save_dir=save_dir_each_b,
+                                            filename=f"{name}_channel_{channel_name}",
+                                            img=im)
                     if im_out_b.shape[0] == 1 or im_out_b.shape[0] == 3:
                         im_out_b = self._convert_tensor_to_image(im_out_b)
-                        io.imsave(f"{save_dir_each_b}/{name}.png", im_out_b, check_contrast=False)
+                        save_image_function(save_dir=save_dir_each_b,
+                                            filename=f"{name}",
+                                            img=im_out_b)
                     else:
                         save_dir_img_each_composite = check_dir(f"{save_dir_each_b}/Composite")
                         if self.dim_match and self.output_dim_label is not None:
@@ -2390,10 +2408,9 @@ class cWSBGPTester(object):
                                                                  data_range=self.data_range,
                                                                  image_dtype=self.image_dtype)
 
-                        io.imsave(f"{save_dir_img_each_composite}/{name}.png",
-                                  composite,
-                                  check_contrast=False)
-
+                        save_image_function(save_dir=save_dir_img_each_composite,
+                                            filename=f"{name}",
+                                            img=composite)
         name = os.path.splitext(os.path.basename(path))[0]
         save_dir_each = check_dir(f"{save_dir}/{name}")
 

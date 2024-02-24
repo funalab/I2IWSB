@@ -6,6 +6,9 @@ import shutil
 import random
 import numpy as np
 from datetime import datetime
+from PIL import Image
+from skimage import io
+
 
 class CustomException(Exception):
     pass
@@ -287,3 +290,11 @@ def convert_channels_to_rgbs(images: np.ndarray, table_label: list, table_artifa
     out_rescale = out * (data_range / np.max(out))
     out_rescale = out_rescale.astype(image_dtype)
     return out_rescale
+
+def save_image_function(save_dir, filename, img):
+    if img.dtype == 'uint16':
+        Image.fromarray(img).save(f"{save_dir}/{filename}.tif")
+    else:
+        io.imsave(f"{save_dir}/{filename}.png",
+                  img,
+                  check_contrast=False)
