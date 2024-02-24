@@ -1,4 +1,5 @@
 import os
+import imageio
 import json
 import pytz
 import torch
@@ -6,7 +7,6 @@ import shutil
 import random
 import numpy as np
 from datetime import datetime
-from PIL import Image
 from skimage import io
 
 
@@ -293,7 +293,7 @@ def convert_channels_to_rgbs(images: np.ndarray, table_label: list, table_artifa
 
 def save_image_function(save_dir, filename, img):
     if img.dtype == 'uint16':
-        Image.fromarray(img).save(f"{save_dir}/{filename}.tif")
+        imageio.imwrite(f"{save_dir}/{filename}.png", img)
     else:
         io.imsave(f"{save_dir}/{filename}.png",
                   img,
