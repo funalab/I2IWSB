@@ -9,6 +9,7 @@ import torch.nn.functional as F
 import collections
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 from sklearn import metrics
 import torch.nn as nn
 import torch.autograd as autograd
@@ -84,7 +85,11 @@ class cWGANGPTester(object):
 
         # predict
         cnt = 0
-        for input_real, output_real in data_iter:
+        if phase == 'test':
+            tqdm_disable = False
+        else:
+            tqdm_disable = True
+        for input_real, output_real in tqdm(data_iter, disable=tqdm_disable):
             input_real = input_real.to(torch.device(self.device))
             real_imgs = output_real.to(torch.device(self.device))
 
@@ -472,7 +477,11 @@ class guidedI2ITester(object):
 
         # predict
         cnt = 0
-        for data in data_iter:
+        if phase == 'test':
+            tqdm_disable = False
+        else:
+            tqdm_disable = True
+        for data in tqdm(data_iter, disable=tqdm_disable):
             # parse data
             input_real, real_imgs, weak_label, batch_size = self._parse_data(data=data)
 
@@ -947,7 +956,11 @@ class I2SBTester(object):
 
         # predict
         cnt = 0
-        for data in data_iter:
+        if phase == 'test':
+            tqdm_disable = False
+        else:
+            tqdm_disable = True
+        for data in tqdm(data_iter, disable=tqdm_disable):
             # parse data
             # x0 target, x1 source
             x0, x1, mask, cond = self.sample_batch(data=data)
@@ -1476,7 +1489,11 @@ class PaletteTester(object):
 
         # predict
         cnt = 0
-        for data in data_iter:
+        if phase == 'test':
+            tqdm_disable = False
+        else:
+            tqdm_disable = True
+        for data in tqdm(data_iter, disable=tqdm_disable):
             # parse data
             input_real, real_imgs, batch_size = self._parse_data(data=data)
 
@@ -1981,7 +1998,11 @@ class cWSBGPTester(object):
 
         # predict
         cnt = 0
-        for data in data_iter:
+        if phase == 'test':
+            tqdm_disable = False
+        else:
+            tqdm_disable = True
+        for data in tqdm(data_iter, disable=tqdm_disable):
             # parse data
             # x0 target, x1 source
             x0, x1, mask, cond = self.sample_batch(data=data)
