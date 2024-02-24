@@ -272,5 +272,6 @@ def get_test_args_WSB(args, save_dir, device, test_dataset):
         tester_args['ema'] = float(args.ema)
     else:
         raise NotImplementedError(f"{str(args.model)}")
-
+    print(tester_args['dim_match'])
+    print(tester_args['output_dim_label'])
     return tester_args
