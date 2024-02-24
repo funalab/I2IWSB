@@ -292,6 +292,8 @@ def convert_channels_to_rgbs(images: np.ndarray, table_label: list, table_artifa
     return out_rescale
 
 def save_image_function(save_dir, filename, img):
+    print(img.dtype)
+    print(img.shape)
     if img.dtype == 'uint16':
         imageio.imwrite(f"{save_dir}/{filename}.png", img)
     else:
