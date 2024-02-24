@@ -9,8 +9,8 @@ import torch.nn.functional as F
 import collections
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
 from sklearn import metrics
+from multiprocessing import Pool
 import torch.nn as nn
 import torch.autograd as autograd
 from PIL import Image
@@ -58,6 +58,95 @@ class cWGANGPTester(object):
         self.data_range = kwargs['data_range']
         self.normalization = kwargs['normalization']
 
+        self.test_num_workers = kwargs['test_num_workers'] if 'test_num_workers' in kwargs else 4
+
+    def _wrapper_test_func(self, args):
+        return self._test_func(*args)
+
+    def _test_func(self, data, model_G, model_D, epoch, phase, save_dir_img, cnt):
+        input_real, output_real = data
+        input_real = input_real.to(torch.device(self.device))
+        real_imgs = output_real.to(torch.device(self.device))
+
+        with torch.no_grad():
+            if phase == 'test' and self.crop_size is not None:
+                # test phaseかつcrop augmentationさせてた場合，slideさせて平均を取る
+                cropped_input_reals = image_sliding_crop(image=input_real,
+                                                         crop_size=self.crop_size,
+                                                         slide_mode='half')
+
+                fake_img_box = []
+                for cropped_input_real_data in cropped_input_reals:
+                    # parse
+                    pos = cropped_input_real_data['pos']
+                    cropped_input_real = cropped_input_real_data['data']
+                    cropped_input_real = cropped_input_real.to(torch.device(self.device))
+                    cropped_input_real = torch.unsqueeze(cropped_input_real, dim=0)  # batch
+                    # inference
+                    cropped_fake_imgs = model_G(cropped_input_real)
+                    cropped_fake_imgs = torch.squeeze(cropped_fake_imgs)
+
+                    fake_img_box.append({'pos': pos, 'data': cropped_fake_imgs})
+
+                fake_imgs = concatinate_slides(images=fake_img_box, source=real_imgs)
+                fake_imgs = torch.unsqueeze(fake_imgs, dim=0)  # batch
+            else:
+                fake_imgs = model_G(input_real)
+
+            fake_imgs = fake_imgs.to(torch.device(self.device))
+
+        # create input sets for discriminator
+        real_concat_with_input = torch.cat((real_imgs, input_real), 1)
+        fake_concat_with_input = torch.cat((fake_imgs, input_real), 1)
+        real_concat_with_input = real_concat_with_input.to(torch.device(self.device))
+        fake_concat_with_input = fake_concat_with_input.to(torch.device(self.device))
+
+        # discriminate
+        real_d = model_D(real_concat_with_input).mean()
+        fake_d = model_D(fake_concat_with_input).mean()
+
+        # calculate gradient penalty
+        gradient_penalty = self._calculate_gradient_penalty(model_D, real_concat_with_input, fake_concat_with_input)
+
+        # loss
+        loss_D = fake_d - real_d + self.lamb * gradient_penalty
+        loss_G = self.gen_criterion(fake_d, fake_imgs, real_imgs, epoch)
+
+        ### 3. evaluate output
+        ssims, mses, maes, psnrs = self._evaluate(fake_imgs, real_imgs, phase, cnt)
+
+        if phase == 'test' and self.image_save:
+            # number = str(cnt).zfill(4)
+            fake_imgs_image = self._convert_tensor_to_image(fake_imgs)
+            if len(self.output_channel_list) == 0:  # rgb
+                fake_imgs_image_bgr = cv2.cvtColor(fake_imgs_image, cv2.COLOR_RGB2BGR)
+                cv2.imwrite(f"{save_dir_img}/generated_{self.file_list[cnt]}.tif", fake_imgs_image_bgr)
+                if self.image_dtype != 'uint8':
+                    fake_imgs_image_uint8 = (fake_imgs_image / self.data_range) * 255
+                    fake_imgs_image_uint8 = fake_imgs_image_uint8.astype('uint8')
+                    fake_imgs_image_uint8_bgr = cv2.cvtColor(fake_imgs_image_uint8, cv2.COLOR_RGB2BGR)
+                    cv2.imwrite(f"{save_dir_img}/generated_{self.file_list[cnt]}.png", fake_imgs_image_uint8_bgr)
+            else:
+                save_dir_img_each = check_dir(f"{save_dir_img}/{self.file_list[cnt]}")
+                for channel_ind in range(len(self.output_channel_list)):
+                    fake_imgs_image_channel = fake_imgs_image[:, :, channel_ind]
+                    save_image_function(save_dir=save_dir_img_each,
+                                        filename=self.output_channel_list[channel_ind],
+                                        img=fake_imgs_image_channel)
+
+                save_dir_img_each_composite = check_dir(f"{save_dir_img_each}/Composite")
+                composite = convert_channels_to_rgbs(images=fake_imgs_image,
+                                                     table_label=self.table_label,
+                                                     table_artifact=self.table_artifact,
+                                                     flag_artifact=True,
+                                                     data_range=self.data_range,
+                                                     image_dtype=self.image_dtype)
+                save_image_function(save_dir=save_dir_img_each_composite,
+                                    filename=f"Composite_{self.file_list[cnt]}",
+                                    img=composite)
+
+        return loss_D, loss_G, ssims, mses, maes, psnrs
+
     def test(self, model_G, model_D, data_iter, phase="test", epoch=0):
         start = time.time()
 
@@ -72,6 +161,7 @@ class cWGANGPTester(object):
         model_G.phase = phase
         model_D.phase = phase
 
+        save_dir_img = None
         if phase == 'test':
             save_dir_img = check_dir(os.path.join(self.save_dir, "images"))
 
@@ -84,100 +174,30 @@ class cWGANGPTester(object):
         loss_D_list = []
 
         # predict
-        cnt = 0
         if phase == 'test':
-            tqdm_disable = False
+            p = Pool(self.test_num_workers)
+            inputs = [(data, model_G, model_D, epoch, phase, save_dir_img, i) for i, data in enumerate(data_iter)]
+            outputs = p.map(self._wrapper_test_func, inputs)
+            for output in outputs:
+                loss_G, loss_D, ssims, mses, maes, psnrs = output
+                # save results
+                loss_D_list.append(loss_D.to(torch.device('cpu')).detach().numpy())
+                loss_G_list.append(loss_G.to(torch.device('cpu')).detach().numpy())
+                ssim_list += ssims
+                mse_list += mses
+                mae_list += maes
+                psnr_list += psnrs
         else:
-            tqdm_disable = True
-        for input_real, output_real in tqdm(data_iter, disable=tqdm_disable):
-            input_real = input_real.to(torch.device(self.device))
-            real_imgs = output_real.to(torch.device(self.device))
-
-            with torch.no_grad():
-                if phase == 'test' and self.crop_size is not None:
-                    # test phaseかつcrop augmentationさせてた場合，slideさせて平均を取る
-                    cropped_input_reals = image_sliding_crop(image=input_real,
-                                                             crop_size=self.crop_size,
-                                                             slide_mode='half')
-
-                    fake_img_box = []
-                    for cropped_input_real_data in cropped_input_reals:
-                        # parse
-                        pos = cropped_input_real_data['pos']
-                        cropped_input_real = cropped_input_real_data['data']
-                        cropped_input_real = cropped_input_real.to(torch.device(self.device))
-                        cropped_input_real = torch.unsqueeze(cropped_input_real, dim=0)  # batch
-                        # inference
-                        cropped_fake_imgs = model_G(cropped_input_real)
-                        cropped_fake_imgs = torch.squeeze(cropped_fake_imgs)
-
-                        fake_img_box.append({'pos': pos, 'data': cropped_fake_imgs})
-
-                    fake_imgs = concatinate_slides(images=fake_img_box, source=real_imgs)
-                    fake_imgs = torch.unsqueeze(fake_imgs, dim=0)  # batch
-                else:
-                    fake_imgs = model_G(input_real)
-
-                fake_imgs = fake_imgs.to(torch.device(self.device))
-
-            # create input sets for discriminator
-            real_concat_with_input = torch.cat((real_imgs, input_real), 1)
-            fake_concat_with_input = torch.cat((fake_imgs, input_real), 1)
-            real_concat_with_input = real_concat_with_input.to(torch.device(self.device))
-            fake_concat_with_input = fake_concat_with_input.to(torch.device(self.device))
-
-            # discriminate
-            real_d = model_D(real_concat_with_input).mean()
-            fake_d = model_D(fake_concat_with_input).mean()
-
-            # calculate gradient penalty
-            gradient_penalty = self._calculate_gradient_penalty(model_D, real_concat_with_input, fake_concat_with_input)
-
-            # loss
-            loss_D = fake_d - real_d + self.lamb * gradient_penalty
-            loss_G = self.gen_criterion(fake_d, fake_imgs, real_imgs, epoch)
-
-            ### 3. evaluate output
-            ssims, mses, maes, psnrs = self._evaluate(fake_imgs, real_imgs, phase, cnt)
-
-            # save results
-            loss_D_list.append(loss_D.to(torch.device('cpu')).detach().numpy())
-            loss_G_list.append(loss_G.to(torch.device('cpu')).detach().numpy())
-            ssim_list += ssims
-            mse_list += mses
-            mae_list += maes
-            psnr_list += psnrs
-
-            if phase == 'test' and self.image_save:
-                #number = str(cnt).zfill(4)
-                fake_imgs_image = self._convert_tensor_to_image(fake_imgs)
-                if len(self.output_channel_list) == 0:  # rgb
-                    fake_imgs_image_bgr = cv2.cvtColor(fake_imgs_image, cv2.COLOR_RGB2BGR)
-                    cv2.imwrite(f"{save_dir_img}/generated_{self.file_list[cnt]}.tif", fake_imgs_image_bgr)
-                    if self.image_dtype != 'uint8':
-                        fake_imgs_image_uint8 = (fake_imgs_image/self.data_range)*255
-                        fake_imgs_image_uint8 = fake_imgs_image_uint8.astype('uint8')
-                        fake_imgs_image_uint8_bgr = cv2.cvtColor(fake_imgs_image_uint8, cv2.COLOR_RGB2BGR)
-                        cv2.imwrite(f"{save_dir_img}/generated_{self.file_list[cnt]}.png", fake_imgs_image_uint8_bgr)
-                else:
-                    save_dir_img_each = check_dir(f"{save_dir_img}/{self.file_list[cnt]}")
-                    for channel_ind in range(len(self.output_channel_list)):
-                        fake_imgs_image_channel = fake_imgs_image[:, :, channel_ind]
-                        save_image_function(save_dir=save_dir_img_each,
-                                            filename=self.output_channel_list[channel_ind],
-                                            img=fake_imgs_image_channel)
-
-                    save_dir_img_each_composite = check_dir(f"{save_dir_img_each}/Composite")
-                    composite = convert_channels_to_rgbs(images=fake_imgs_image,
-                                                         table_label=self.table_label,
-                                                         table_artifact=self.table_artifact,
-                                                         flag_artifact=True,
-                                                         data_range=self.data_range,
-                                                         image_dtype=self.image_dtype)
-                    save_image_function(save_dir=save_dir_img_each_composite,
-                                        filename=f"Composite_{self.file_list[cnt]}",
-                                        img=composite)
-            cnt += 1
+            for i, data in enumerate(data_iter):
+                output = self._test_func(data, model_G, model_D, epoch, phase, save_dir_img, i)
+                loss_G, loss_D, ssims, mses, maes, psnrs = output
+                # save results
+                loss_D_list.append(loss_D.to(torch.device('cpu')).detach().numpy())
+                loss_G_list.append(loss_G.to(torch.device('cpu')).detach().numpy())
+                ssim_list += ssims
+                mse_list += mses
+                mae_list += maes
+                psnr_list += psnrs
 
         evaluates_dict = {
             "ssim": ssim_list,
@@ -362,6 +382,8 @@ class guidedI2ITester(object):
         self.eval_metrics = kwargs['eval_metrics'] if 'eval_metrics' in kwargs else None
         self.lossfun = kwargs['lossfun'] if 'lossfun' in kwargs else None
 
+        self.test_num_workers = kwargs['test_num_workers'] if 'test_num_workers' in kwargs else 4
+
     def _parse_data(self, data):
         image_source, image_target, weak_label = data
         cond_image = image_source.to(torch.device(self.device))
@@ -449,6 +471,42 @@ class guidedI2ITester(object):
         else:
             return torch.tensor(loss), None, None
 
+
+    def _wrapper_test_func(self, args):
+        return self._test_func(*args)
+
+    def _test_func(self, data, model, phase, save_dir_img, cnt):
+        # parse data
+        input_real, real_imgs, weak_label, batch_size = self._parse_data(data=data)
+
+        with torch.no_grad():
+            if phase == 'test' and self.crop_size is not None:
+                loss, fake_imgs, visuals = self._crop_and_concatinate(model, input_real, real_imgs, phase, weak_label)
+            else:
+                # inference
+                loss = model(real_imgs, weak_label, input_real, mask=None)
+
+                if self._check_flag(phase=phase):
+                    fake_imgs, visuals = model.restoration(input_real, weak_label,
+                                                           classifier_scale=1, y_t=None,
+                                                           y_0=real_imgs, mask=None,
+                                                           sample_num=self.sample_num)
+
+                    fake_imgs = fake_imgs.to(torch.device(self.device)).clone().detach()
+
+            if phase == 'test' and self.image_save:
+                results = self._save_current_results(path=self.file_list[cnt],
+                                                     gt_image=real_imgs,
+                                                     visuals=visuals)
+                self._save_images_test(save_dir=save_dir_img, results=results)
+
+        ssims, mses, maes, psnrs = None, None, None, None
+        if self._check_flag(phase=phase):
+            ### 3. evaluate output
+            ssims, mses, maes, psnrs = self._evaluate(fake_imgs, real_imgs, phase, cnt)
+
+        return loss, ssims, mses, maes, psnrs
+
     def test(self, model, data_iter, phase="test"):
         start = time.time()
 
@@ -476,49 +534,30 @@ class guidedI2ITester(object):
         loss_list = []
 
         # predict
-        cnt = 0
         if phase == 'test':
-            tqdm_disable = False
+            p = Pool(self.test_num_workers)
+            inputs = [(data, model, phase, save_dir_img, i) for i, data in enumerate(data_iter)]
+            outputs = p.map(self._wrapper_test_func, inputs)
+            for output in outputs:
+                loss, ssims, mses, maes, psnrs = output
+                # save results
+                loss_list.append(loss.to(torch.device('cpu')).clone().detach().numpy())
+                if self._check_flag(phase=phase):
+                    ssim_list += ssims
+                    mse_list += mses
+                    mae_list += maes
+                    psnr_list += psnrs
         else:
-            tqdm_disable = True
-        for data in tqdm(data_iter, disable=tqdm_disable):
-            # parse data
-            input_real, real_imgs, weak_label, batch_size = self._parse_data(data=data)
-
-            with torch.no_grad():
-                if phase == 'test' and self.crop_size is not None:
-                    loss, fake_imgs, visuals = self._crop_and_concatinate(model, input_real, real_imgs, phase, weak_label)
-                else:
-                    # inference
-                    loss = model(real_imgs, weak_label, input_real, mask=None)
-
-                    if self._check_flag(phase=phase):
-                        fake_imgs, visuals = model.restoration(input_real, weak_label,
-                                                               classifier_scale=1, y_t=None,
-                                                               y_0=real_imgs, mask=None,
-                                                               sample_num=self.sample_num)
-
-                        fake_imgs = fake_imgs.to(torch.device(self.device)).clone().detach()
-
-                if phase == 'test' and self.image_save:
-                    results = self._save_current_results(path=self.file_list[cnt],
-                                                         gt_image=real_imgs,
-                                                         visuals=visuals)
-                    self._save_images_test(save_dir=save_dir_img, results=results)
-
-            if self._check_flag(phase=phase):
-                ### 3. evaluate output
-                ssims, mses, maes, psnrs = self._evaluate(fake_imgs, real_imgs, phase, cnt)
-
-            # save results
-            loss_list.append(loss.to(torch.device('cpu')).clone().detach().numpy())
-            if self._check_flag(phase=phase):
-                ssim_list += ssims
-                mse_list += mses
-                mae_list += maes
-                psnr_list += psnrs
-
-            cnt += 1
+            for i, data in enumerate(data_iter):
+                output = self._test_func(data, model, phase, save_dir_img, i)
+                loss, ssims, mses, maes, psnrs = output
+                # save results
+                loss_list.append(loss.to(torch.device('cpu')).clone().detach().numpy())
+                if self._check_flag(phase=phase):
+                    ssim_list += ssims
+                    mse_list += mses
+                    mae_list += maes
+                    psnr_list += psnrs
 
         if self._check_flag(phase=phase):
             evaluates_dict = {
@@ -795,6 +834,8 @@ class I2SBTester(object):
         self.output_dim_label = kwargs['output_dim_label'] if 'output_dim_label' in kwargs else None
         self.distributed = kwargs['distributed'] if 'distributed' in kwargs else False
 
+        self.test_num_workers = kwargs['test_num_workers'] if 'test_num_workers' in kwargs else 4
+
     def sample_batch(self, data):
         # clean_img is "target" domain and corrupt_img is "source" domain
         img_source, img_target = data
@@ -926,6 +967,65 @@ class I2SBTester(object):
         else:
             return torch.tensor(loss), None, None
 
+    def _wrapper_test_func(self, args):
+        return self._test_func(*args)
+
+    def _test_func(self, data, model, phase, save_dir_img, cnt):
+        # parse data
+        # x0 target, x1 source
+        x0, x1, mask, cond = self.sample_batch(data=data)
+
+        with torch.no_grad():
+            if phase == 'test' and self.crop_size is not None:
+                loss, fake_imgs, _ = self._crop_and_concatinate(model, x0, x1, phase, cond, mask)
+            else:
+                # inference
+                # loss
+                step = torch.randint(0, self.interval, (x0.shape[0],))
+                xt = self.diffusion.q_sample(step, x0, x1, ot_ode=self.ot_ode)
+                label = self.compute_label(step, x0, xt)
+                pred = model(xt, step, cond=cond)
+                assert xt.shape == label.shape == pred.shape
+                if mask is not None:
+                    pred = mask * pred
+                    label = mask * label
+
+                loss = F.mse_loss(pred, label)
+
+                if self._check_flag(phase=phase):
+                    fake_imgs, _ = self.ddpm_sampling(
+                        model, x1, mask=mask, cond=cond, clip_denoise=True, verbose=False
+                    )
+
+                    fake_imgs = fake_imgs.to(torch.device(self.device)).clone().detach()
+
+        ssims, mses, maes, psnrs = None, None, None, None
+        if self._check_flag(phase=phase):
+            ### 3. evaluate output
+            fake_imgs_for_evaluate = torch.squeeze(fake_imgs)
+            evaluate_idx = 0
+            fake_imgs_for_evaluate = torch.unsqueeze(fake_imgs_for_evaluate[evaluate_idx, :, :, :], axis=0)
+            x0_for_evaluate = x0.clone()
+
+            if self.dim_match and self.output_dim_label is not None:
+                if len(self.output_dim_label) > self.out_channels:
+                    x0_for_evaluate = x0[0, :self.out_channels, :, :]
+                    fake_imgs_for_evaluate = fake_imgs_for_evaluate[0, :self.out_channels, :, :]
+
+                    x0_for_evaluate = torch.unsqueeze(x0_for_evaluate, axis=0)
+                    fake_imgs_for_evaluate = torch.unsqueeze(fake_imgs_for_evaluate, axis=0)
+
+            if phase == 'test' and self.image_save:
+                self._save_images_test(path=self.file_list[cnt],
+                                       save_dir=save_dir_img,
+                                       real_imgs=x0_for_evaluate.detach().clone().float().cpu(),
+                                       fake_imgs=fake_imgs_for_evaluate.detach().clone().float().cpu(),
+                                       visuals=None)
+
+            ssims, mses, maes, psnrs = self._evaluate(fake_imgs_for_evaluate, x0_for_evaluate, phase, cnt)
+
+        return loss, ssims, mses, maes, psnrs
+
     def test(self, model, data_iter, phase="test"):
         start = time.time()
         # turn on the testing mode; clean up the history
@@ -955,74 +1055,31 @@ class I2SBTester(object):
         loss_list = []
 
         # predict
-        cnt = 0
         if phase == 'test':
-            tqdm_disable = False
+            p = Pool(self.test_num_workers)
+            inputs = [(data, model, phase, save_dir_img, i) for i, data in enumerate(data_iter)]
+            outputs = p.map(self._wrapper_test_func, inputs)
+            for output in outputs:
+                loss, ssims, mses, maes, psnrs = output
+                # save results
+                loss_list.append(loss.to(torch.device('cpu')).clone().detach().numpy())
+                if self._check_flag(phase=phase):
+                    ssim_list += ssims
+                    mse_list += mses
+                    mae_list += maes
+                    psnr_list += psnrs
         else:
-            tqdm_disable = True
-        for data in tqdm(data_iter, disable=tqdm_disable):
-            # parse data
-            # x0 target, x1 source
-            x0, x1, mask, cond = self.sample_batch(data=data)
+            for i, data in enumerate(data_iter):
+                output = self._test_func(data, model, phase, save_dir_img, i)
+                loss, ssims, mses, maes, psnrs = output
 
-            with torch.no_grad():
-                if phase == 'test' and self.crop_size is not None:
-                    loss, fake_imgs, _ = self._crop_and_concatinate(model, x0, x1, phase, cond, mask)
-                else:
-                    # inference
-                    # loss
-                    step = torch.randint(0, self.interval, (x0.shape[0],))
-                    xt = self.diffusion.q_sample(step, x0, x1, ot_ode=self.ot_ode)
-                    label = self.compute_label(step, x0, xt)
-                    pred = model(xt, step, cond=cond)
-                    assert xt.shape == label.shape == pred.shape
-                    if mask is not None:
-                        pred = mask * pred
-                        label = mask * label
-
-                    loss = F.mse_loss(pred, label)
-
-
-                    if self._check_flag(phase=phase):
-                        fake_imgs, _ = self.ddpm_sampling(
-                            model, x1, mask=mask, cond=cond, clip_denoise=True, verbose=False
-                        )
-
-                        fake_imgs = fake_imgs.to(torch.device(self.device)).clone().detach()
-
-            if self._check_flag(phase=phase):
-                ### 3. evaluate output
-                fake_imgs_for_evaluate = torch.squeeze(fake_imgs)
-                evaluate_idx = 0
-                fake_imgs_for_evaluate = torch.unsqueeze(fake_imgs_for_evaluate[evaluate_idx, :, :, :], axis=0)
-                x0_for_evaluate = x0.clone()
-
-                if self.dim_match and self.output_dim_label is not None:
-                    if len(self.output_dim_label) > self.out_channels:
-                        x0_for_evaluate = x0[0, :self.out_channels, :, :]
-                        fake_imgs_for_evaluate = fake_imgs_for_evaluate[0, :self.out_channels, :, :]
-
-                        x0_for_evaluate = torch.unsqueeze(x0_for_evaluate, axis=0)
-                        fake_imgs_for_evaluate = torch.unsqueeze(fake_imgs_for_evaluate, axis=0)
-
-                if phase == 'test' and self.image_save:
-                    self._save_images_test(path=self.file_list[cnt],
-                                           save_dir=save_dir_img,
-                                           real_imgs=x0_for_evaluate.detach().clone().float().cpu(),
-                                           fake_imgs=fake_imgs_for_evaluate.detach().clone().float().cpu(),
-                                           visuals=None)
-
-                ssims, mses, maes, psnrs = self._evaluate(fake_imgs_for_evaluate, x0_for_evaluate, phase, cnt)
-
-            # save results
-            loss_list.append(loss.to(torch.device('cpu')).clone().detach().numpy())
-            if self._check_flag(phase=phase):
-                ssim_list += ssims
-                mse_list += mses
-                mae_list += maes
-                psnr_list += psnrs
-
-            cnt += 1
+                # save results
+                loss_list.append(loss.to(torch.device('cpu')).clone().detach().numpy())
+                if self._check_flag(phase=phase):
+                    ssim_list += ssims
+                    mse_list += mses
+                    mae_list += maes
+                    psnr_list += psnrs
 
         if self._check_flag(phase=phase):
             evaluates_dict = {
@@ -1382,6 +1439,8 @@ class PaletteTester(object):
         self.input_dim_label = kwargs['input_dim_label'] if 'input_dim_label' in kwargs else None
         self.output_dim_label = kwargs['output_dim_label'] if 'output_dim_label' in kwargs else None
 
+        self.test_num_workers = kwargs['test_num_workers'] if 'test_num_workers' in kwargs else 4
+
     def _parse_data(self, data):
         image_source, image_target = data
         image_source = image_source.to(torch.device(self.device))
@@ -1461,6 +1520,49 @@ class PaletteTester(object):
         else:
             return torch.tensor(loss), None, None
 
+    def _wrapper_test_func(self,args):
+        return self._test_func(*args)
+
+    def _test_func(self, data, model, phase, save_dir_img, cnt):
+        # parse data
+        input_real, real_imgs, batch_size = self._parse_data(data=data)
+
+        with torch.no_grad():
+            if phase == 'test' and self.crop_size is not None:
+                loss, fake_imgs, visuals = self._crop_and_concatinate(model, input_real, real_imgs, phase)
+            else:
+                # inference
+                loss = model(real_imgs, input_real, mask=None)
+
+                if self._check_flag(phase=phase):
+                    fake_imgs, visuals = model.restoration(input_real, sample_num=self.sample_num)
+
+                    fake_imgs = fake_imgs.to(torch.device(self.device)).clone().detach()
+
+            if phase == 'test' and self.image_save:
+                results = self._save_current_results(path=self.file_list[cnt],
+                                                     gt_image=real_imgs,
+                                                     visuals=visuals)
+                self._save_images_test(save_dir=save_dir_img, results=results)
+
+        ssims, mses, maes, psnrs = None, None, None, None
+        if self._check_flag(phase=phase):
+            ### 3. evaluate output
+            fake_imgs_for_evaluate = fake_imgs.clone()
+            real_imgs_for_evaluate = real_imgs.clone()
+
+            if self.dim_match and self.output_dim_label is not None:
+                if len(self.output_dim_label) > self.out_channels:
+                    real_imgs_for_evaluate = real_imgs[0, :self.out_channels, :, :]
+                    fake_imgs_for_evaluate = fake_imgs_for_evaluate[0, :self.out_channels, :, :]
+
+                    real_imgs_for_evaluate = torch.unsqueeze(real_imgs_for_evaluate, axis=0)
+                    fake_imgs_for_evaluate = torch.unsqueeze(fake_imgs_for_evaluate, axis=0)
+
+            ssims, mses, maes, psnrs = self._evaluate(fake_imgs_for_evaluate, real_imgs_for_evaluate, phase, cnt)
+
+        return loss, ssims, mses, maes, psnrs
+
     def test(self, model, data_iter, phase="test"):
         start = time.time()
 
@@ -1488,61 +1590,31 @@ class PaletteTester(object):
         loss_list = []
 
         # predict
-        cnt = 0
         if phase == 'test':
-            tqdm_disable = False
+            p = Pool(self.test_num_workers)
+            inputs = [(data, model, phase, save_dir_img, i) for i, data in enumerate(data_iter)]
+            outputs = p.map(self._wrapper_test_func, inputs)
+            for output in outputs:
+                loss, ssims, mses, maes, psnrs = output
+                # save results
+                loss_list.append(loss.to(torch.device('cpu')).clone().detach().numpy())
+                if self._check_flag(phase=phase):
+                    ssim_list += ssims
+                    mse_list += mses
+                    mae_list += maes
+                    psnr_list += psnrs
         else:
-            tqdm_disable = True
-        for data in tqdm(data_iter, disable=tqdm_disable):
-            # parse data
-            input_real, real_imgs, batch_size = self._parse_data(data=data)
+            for i, data in enumerate(data_iter):
+                output = self._test_func(data, model, phase, save_dir_img, i)
+                loss, ssims, mses, maes, psnrs = output
 
-            with torch.no_grad():
-                if phase == 'test' and self.crop_size is not None:
-                    loss, fake_imgs, visuals = self._crop_and_concatinate(model, input_real, real_imgs, phase)
-                else:
-                    # inference
-                    loss = model(real_imgs, input_real, mask=None)
-
-                    if self._check_flag(phase=phase):
-                        fake_imgs, visuals = model.restoration(input_real, sample_num=self.sample_num)
-
-                        fake_imgs = fake_imgs.to(torch.device(self.device)).clone().detach()
-
-                if phase == 'test' and self.image_save:
-                    results = self._save_current_results(path=self.file_list[cnt],
-                                                         gt_image=real_imgs,
-                                                         visuals=visuals)
-                    self._save_images_test(save_dir=save_dir_img, results=results)
-
-            if self._check_flag(phase=phase):
-                ### 3. evaluate output
-                ssims, mses, maes, psnrs = self._evaluate(fake_imgs, real_imgs, phase, cnt)
-
-            if self._check_flag(phase=phase):
-                ### 3. evaluate output
-                fake_imgs_for_evaluate = fake_imgs.clone()
-                real_imgs_for_evaluate = real_imgs.clone()
-
-                if self.dim_match and self.output_dim_label is not None:
-                    if len(self.output_dim_label) > self.out_channels:
-                        real_imgs_for_evaluate = real_imgs[0, :self.out_channels, :, :]
-                        fake_imgs_for_evaluate = fake_imgs_for_evaluate[0, :self.out_channels, :, :]
-
-                        real_imgs_for_evaluate = torch.unsqueeze(real_imgs_for_evaluate, axis=0)
-                        fake_imgs_for_evaluate = torch.unsqueeze(fake_imgs_for_evaluate, axis=0)
-
-                ssims, mses, maes, psnrs = self._evaluate(fake_imgs_for_evaluate, real_imgs_for_evaluate, phase, cnt)
-
-            # save results
-            loss_list.append(loss.to(torch.device('cpu')).clone().detach().numpy())
-            if self._check_flag(phase=phase):
-                ssim_list += ssims
-                mse_list += mses
-                mae_list += maes
-                psnr_list += psnrs
-
-            cnt += 1
+                # save results
+                loss_list.append(loss.to(torch.device('cpu')).clone().detach().numpy())
+                if self._check_flag(phase=phase):
+                    ssim_list += ssims
+                    mse_list += mses
+                    mae_list += maes
+                    psnr_list += psnrs
 
         if self._check_flag(phase=phase):
             evaluates_dict = {
@@ -1833,6 +1905,8 @@ class cWSBGPTester(object):
         self.output_dim_label = kwargs['output_dim_label'] if 'output_dim_label' in kwargs else None
         self.distributed = kwargs['distributed'] if 'distributed' in kwargs else False
 
+        self.test_num_workers = kwargs['test_num_workers'] if 'test_num_workers' in kwargs else 4
+
     def sample_batch(self, data):
         # clean_img is "target" domain and corrupt_img is "source" domain
         img_source, img_target = data
@@ -1964,6 +2038,97 @@ class cWSBGPTester(object):
         else:
             return torch.tensor(loss), None, None
 
+    def _wrapper_test_func(self, args):
+        return self._test_func(*args)
+
+    def _test_func(self, data, model_G, model_D, epoch, phase, save_dir_img, cnt):
+        # parse data
+        # x0 target, x1 source
+        x0, x1, mask, cond = self.sample_batch(data=data)
+
+        x1 = x1.to(torch.device(self.device))
+        x0 = x0.to(torch.device(self.device))
+
+        with torch.no_grad():
+            if phase == 'test' and self.crop_size is not None:
+                loss, fake_imgs, _ = self._crop_and_concatinate(model_G, x0, x1, phase, cond, mask)
+            else:
+                # inference
+                # loss
+                step = torch.randint(0, self.interval, (x0.shape[0],))
+                xt = self.diffusion.q_sample(step, x0, x1, ot_ode=self.ot_ode)
+                label = self.compute_label(step, x0, xt)
+                pred = model_G(xt, step, cond=cond)
+                assert xt.shape == label.shape == pred.shape
+                if mask is not None:
+                    pred = mask * pred
+                    label = mask * label
+
+                if self._check_flag(phase=phase):
+                    fake_imgs, _ = self.ddpm_sampling(
+                        model_G, x1, mask=mask, cond=cond, clip_denoise=True, verbose=False
+                    )
+
+                    fake_imgs = fake_imgs.to(torch.device(self.device)).clone().detach()
+
+        # create input sets for discriminator
+        if phase == 'test' and self.crop_size is not None:
+            fake_imgs_for_evaluate = torch.squeeze(fake_imgs)
+            evaluate_idx = 0
+            fake_imgs_for_evaluate = torch.unsqueeze(fake_imgs_for_evaluate[evaluate_idx, :, :, :], axis=0)
+            reals = torch.cat((x1, x0), 1)
+            fakes = torch.cat((fake_imgs_for_evaluate, x0), 1)
+            loss_mse = F.mse_loss(fake_imgs_for_evaluate, x1)
+        else:
+            reals = torch.cat((label, x0), 1)
+            fakes = torch.cat((pred, x0), 1)
+            loss_mse = F.mse_loss(pred, label)
+
+        reals = reals.to(torch.device(self.device))
+        fakes = fakes.to(torch.device(self.device))
+
+        # discriminate
+        real_d = model_D(reals).mean()
+        fake_d = model_D(fakes).mean()
+
+        # calculate gradient penalty
+        gradient_penalty = self._calculate_gradient_penalty(model_D, reals, fakes)
+
+        # loss
+        loss_D = fake_d - real_d + self.lamb * gradient_penalty
+        adversarial_loss = -torch.mean(fake_d)
+        if phase == 'test' and self.crop_size is not None:
+            image_loss = self.mae_loss(fake_imgs_for_evaluate, x1)
+        else:
+            image_loss = self.mae_loss(pred, label)
+        loss_G = image_loss.mean() + 0.01 * adversarial_loss / (epoch + 1)
+
+        ssims, mses, maes, psnrs = None, None, None, None
+        if self._check_flag(phase=phase):
+            ### 3. evaluate output
+            fake_imgs_for_evaluate = torch.squeeze(fake_imgs)
+            evaluate_idx = 0
+            fake_imgs_for_evaluate = torch.unsqueeze(fake_imgs_for_evaluate[evaluate_idx, :, :, :], axis=0)
+            x0_for_evaluate = x0.clone()
+
+            if self.dim_match and self.output_dim_label is not None:
+                if len(self.output_dim_label) > self.out_channels:
+                    x0_for_evaluate = x0[0, :self.out_channels, :, :]
+                    fake_imgs_for_evaluate = fake_imgs_for_evaluate[0, :self.out_channels, :, :]
+
+                    x0_for_evaluate = torch.unsqueeze(x0_for_evaluate, axis=0)
+                    fake_imgs_for_evaluate = torch.unsqueeze(fake_imgs_for_evaluate, axis=0)
+
+            if phase == 'test' and self.image_save:
+                self._save_images_test(path=self.file_list[cnt],
+                                       save_dir=save_dir_img,
+                                       real_imgs=x0_for_evaluate.detach().clone().float().cpu(),
+                                       fake_imgs=fake_imgs_for_evaluate.detach().clone().float().cpu(),
+                                       visuals=None)
+
+            ssims, mses, maes, psnrs = self._evaluate(fake_imgs_for_evaluate, x0_for_evaluate, phase, cnt)
+        return loss_mse, loss_G, loss_D, ssims, mses, maes, psnrs
+
     def test(self, model_G, model_D, data_iter, phase="test", epoch=0):
         start = time.time()
         # turn on the testing mode; clean up the history
@@ -1997,108 +2162,34 @@ class cWSBGPTester(object):
         loss_D_list = []
 
         # predict
-        cnt = 0
         if phase == 'test':
-            tqdm_disable = False
+            p = Pool(self.test_num_workers)
+            inputs = [(data, model_G, model_D, epoch, phase, save_dir_img, i) for i, data in enumerate(data_iter)]
+            outputs = p.map(self._wrapper_test_func, inputs)
+            for output in outputs:
+                loss_mse, loss_G, loss_D, ssims, mses, maes, psnrs = output
+                # save results
+                loss_mse_list.append(loss_mse.to(torch.device('cpu')).detach().numpy())
+                loss_D_list.append(loss_D.to(torch.device('cpu')).detach().numpy())
+                loss_G_list.append(loss_G.to(torch.device('cpu')).detach().numpy())
+                if self._check_flag(phase=phase):
+                    ssim_list += ssims
+                    mse_list += mses
+                    mae_list += maes
+                    psnr_list += psnrs
         else:
-            tqdm_disable = True
-        for data in tqdm(data_iter, disable=tqdm_disable):
-            # parse data
-            # x0 target, x1 source
-            x0, x1, mask, cond = self.sample_batch(data=data)
-
-            x1 = x1.to(torch.device(self.device))
-            x0 = x0.to(torch.device(self.device))
-
-            with torch.no_grad():
-                if phase == 'test' and self.crop_size is not None:
-                    loss, fake_imgs, _ = self._crop_and_concatinate(model_G, x0, x1, phase, cond, mask)
-                else:
-                    # inference
-                    # loss
-                    step = torch.randint(0, self.interval, (x0.shape[0],))
-                    xt = self.diffusion.q_sample(step, x0, x1, ot_ode=self.ot_ode)
-                    label = self.compute_label(step, x0, xt)
-                    pred = model_G(xt, step, cond=cond)
-                    assert xt.shape == label.shape == pred.shape
-                    if mask is not None:
-                        pred = mask * pred
-                        label = mask * label
-
-                    if self._check_flag(phase=phase):
-                        fake_imgs, _ = self.ddpm_sampling(
-                            model_G, x1, mask=mask, cond=cond, clip_denoise=True, verbose=False
-                        )
-
-                        fake_imgs = fake_imgs.to(torch.device(self.device)).clone().detach()
-
-            # create input sets for discriminator
-            if phase == 'test' and self.crop_size is not None:
-                fake_imgs_for_evaluate = torch.squeeze(fake_imgs)
-                evaluate_idx = 0
-                fake_imgs_for_evaluate = torch.unsqueeze(fake_imgs_for_evaluate[evaluate_idx, :, :, :], axis=0)
-                reals = torch.cat((x1, x0), 1)
-                fakes = torch.cat((fake_imgs_for_evaluate, x0), 1)
-                loss_mse = F.mse_loss(fake_imgs_for_evaluate, x1)
-            else:
-                reals = torch.cat((label, x0), 1)
-                fakes = torch.cat((pred, x0), 1)
-                loss_mse = F.mse_loss(pred, label)
-
-            reals = reals.to(torch.device(self.device))
-            fakes = fakes.to(torch.device(self.device))
-
-            # discriminate
-            real_d = model_D(reals).mean()
-            fake_d = model_D(fakes).mean()
-
-            # calculate gradient penalty
-            gradient_penalty = self._calculate_gradient_penalty(model_D, reals, fakes)
-
-            # loss
-            loss_D = fake_d - real_d + self.lamb * gradient_penalty
-            adversarial_loss = -torch.mean(fake_d)
-            if phase == 'test' and self.crop_size is not None:
-                image_loss = self.mae_loss(fake_imgs_for_evaluate, x1)
-            else:
-                image_loss = self.mae_loss(pred, label)
-            loss_G = image_loss.mean() + 0.01 * adversarial_loss / (epoch + 1)
-
-            if self._check_flag(phase=phase):
-                ### 3. evaluate output
-                fake_imgs_for_evaluate = torch.squeeze(fake_imgs)
-                evaluate_idx = 0
-                fake_imgs_for_evaluate = torch.unsqueeze(fake_imgs_for_evaluate[evaluate_idx, :, :, :], axis=0)
-                x0_for_evaluate = x0.clone()
-
-                if self.dim_match and self.output_dim_label is not None:
-                    if len(self.output_dim_label) > self.out_channels:
-                        x0_for_evaluate = x0[0, :self.out_channels, :, :]
-                        fake_imgs_for_evaluate = fake_imgs_for_evaluate[0, :self.out_channels, :, :]
-
-                        x0_for_evaluate = torch.unsqueeze(x0_for_evaluate, axis=0)
-                        fake_imgs_for_evaluate = torch.unsqueeze(fake_imgs_for_evaluate, axis=0)
-
-                if phase == 'test' and self.image_save:
-                    self._save_images_test(path=self.file_list[cnt],
-                                           save_dir=save_dir_img,
-                                           real_imgs=x0_for_evaluate.detach().clone().float().cpu(),
-                                           fake_imgs=fake_imgs_for_evaluate.detach().clone().float().cpu(),
-                                           visuals=None)
-
-                ssims, mses, maes, psnrs = self._evaluate(fake_imgs_for_evaluate, x0_for_evaluate, phase, cnt)
-
-            # save results
-            loss_mse_list.append(loss_mse.to(torch.device('cpu')).detach().numpy())
-            loss_D_list.append(loss_D.to(torch.device('cpu')).detach().numpy())
-            loss_G_list.append(loss_G.to(torch.device('cpu')).detach().numpy())
-            if self._check_flag(phase=phase):
-                ssim_list += ssims
-                mse_list += mses
-                mae_list += maes
-                psnr_list += psnrs
-
-            cnt += 1
+            for i, data in enumerate(data_iter):
+                output = self._test_func(data, model_G, model_D, epoch, phase, save_dir_img, i)
+                loss_mse, loss_G, loss_D, ssims, mses, maes, psnrs = output
+                # save results
+                loss_mse_list.append(loss_mse.to(torch.device('cpu')).detach().numpy())
+                loss_D_list.append(loss_D.to(torch.device('cpu')).detach().numpy())
+                loss_G_list.append(loss_G.to(torch.device('cpu')).detach().numpy())
+                if self._check_flag(phase=phase):
+                    ssim_list += ssims
+                    mse_list += mses
+                    mae_list += maes
+                    psnr_list += psnrs
 
         evaluates_dict = None
         if self._check_flag(phase=phase):
