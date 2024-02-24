@@ -73,3 +73,12 @@ python build_datasets_JUMP.py --root_path <path> --save_path <save_path> --test_
 - ```test_ratio```: test dataset ratio
 - ```test_split_mode```: split mode (choose wellplate, well or random)
 - ```fold_num```: number of cross-validation fold
+
+
+#### (Option) Extract tests
+Commands to use when you want to reduce the number of tests
+```shell
+python extract_test.py --test_path <path> --num_site_per_well <num_site_per_well>
+```
+- ```test_path```: test path to extract
+- ```num_site_per_well```: number of sites to get from each well
