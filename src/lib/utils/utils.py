@@ -245,7 +245,7 @@ def convert_channels_to_rgbs(images: np.ndarray, table_label: list, table_artifa
         return intensity_img
 
     def _set_rgb_val(ind: int, table_label: list, table_artifact: list, flag_artifact: bool):
-        if ind >= len(table_label):  # artifact
+        if table_label is not None and ind >= len(table_label):  # artifact
             if flag_artifact:
                 val = table_artifact[0]
             else:
