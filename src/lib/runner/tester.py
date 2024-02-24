@@ -2329,7 +2329,6 @@ class cWSBGPTester(object):
                                 output_dim_label = self.output_dim_label[:self.out_channels]
                             else:
                                 output_dim_label = self.output_dim_label.copy()
-                            print("hoge",output_dim_label)
                             composite = convert_channels_to_rgbs(images=self._convert_tensor_to_image(im_out_b),
                                                                  table_label=output_dim_label,
                                                                  table_artifact=[],
@@ -2338,7 +2337,6 @@ class cWSBGPTester(object):
                                                                  image_dtype=self.image_dtype)
 
                         else:
-                            print("fuga",output_dim_label)
                             composite = convert_channels_to_rgbs(images=self._convert_tensor_to_image(im_out_b),
                                                                  table_label=self.table_label,
                                                                  table_artifact=self.table_artifact,
