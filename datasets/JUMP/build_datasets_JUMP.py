@@ -110,6 +110,11 @@ def verify_datasets(save_dir, fold_num, total_train_val):  # data leakageがな�
         match_check = True if len(matched_list) == 0 else False
         print("[fold{}] {}".format(fd, match_check))
 
+
+def remove_duplicates(l:list):
+    return list(set(l))
+
+
 def main(args):
     root_path = str(args.root_path)
     save_dir = str(args.save_path)
@@ -147,6 +152,12 @@ def main(args):
             # create filepath_list
             train_val_filepath_list = create_filepath_list_from_well_plate_path_list(train_val_well_plate_path_list)
             test_filepath_list = create_filepath_list_from_well_plate_path_list(test_well_plate_path_list)
+
+            # remove duplicates
+            train_val_filepath_list = remove_duplicates(train_val_filepath_list)
+            test_filepath_list = remove_duplicates(test_filepath_list)
+
+            print('total file num: {}'.format(len(train_val_filepath_list) + len(test_filepath_list)))
             print('total file num (train+validation): {}'.format(len(train_val_filepath_list)))
             print('total file num (test): {}'.format(len(test_filepath_list)))
 
@@ -172,6 +183,10 @@ def main(args):
             train_val_filepath_list = create_filepath_list_from_well_id(train_val_well_id_list, filepath_list)
             test_filepath_list = create_filepath_list_from_well_id(test_well_id_list, filepath_list)
 
+            # remove duplicates
+            train_val_filepath_list = remove_duplicates(train_val_filepath_list)
+            test_filepath_list = remove_duplicates(test_filepath_list)
+
             print('total file num: {}'.format(len(train_val_filepath_list)+len(test_filepath_list)))
             print('total file num (train+validation): {}'.format(len(train_val_filepath_list)))
             print('total file num (test): {}'.format(len(test_filepath_list)))
@@ -194,6 +209,11 @@ def main(args):
                 if not filepath in test_filepath_list:
                     train_val_filepath_list.append(filepath)
 
+            # remove duplicates
+            train_val_filepath_list = remove_duplicates(train_val_filepath_list)
+            test_filepath_list = remove_duplicates(test_filepath_list)
+
+            print('total file num: {}'.format(len(train_val_filepath_list) + len(test_filepath_list)))
             print('total file num (train+validation): {}'.format(len(train_val_filepath_list)))
             print('total file num(test): {}'.format(len(test_filepath_list)))
 
