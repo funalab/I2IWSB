@@ -127,10 +127,6 @@ def main(args):
 
     well_plate_path_list = glob(f"{root_path}/images/*")
 
-    train_path_list = []
-    val_path_list = []
-    test_path_list = []
-
     with open(f'{save_dir}/split_logs.txt', 'w') as f:
         print(f"[Split mode] {test_split_mode}")
         print('='*100)
