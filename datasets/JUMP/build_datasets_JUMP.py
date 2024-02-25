@@ -79,7 +79,15 @@ def write_train_val_list_to_txt(save_dir, fold_num, train_val_path_list):  # tra
         write_list_to_txt(savefilepath=f"{dist}/validation.txt", path_list=val_filepath_list)
 
 
-def verify_datasets(save_dir, fold_num, total_train_val):  # data leakageがないか検証
+def check_not_has_duplicates(seq: list):
+    return len(seq) == len(set(seq))
+
+
+def remove_duplicates(l:list):
+    return list(set(l))
+
+
+def verify_datasets(save_dir, fold_num, total_train_val, total):  # data leakageがないか検証
     # trainとvalidationの被りなしを確認
     print("[Verify that train and validation are not covered]")
     for fd in range(fold_num):
@@ -92,7 +100,9 @@ def verify_datasets(save_dir, fold_num, total_train_val):  # data leakageがな�
         matched_list = list(set(filelist_train) & set(filelist_validatioin))
         match_check = True if len(matched_list) == 0 else False
         len_check = len(np.unique(filelist_train + filelist_validatioin)) == total_train_val
-        print("[fold{}] {}, {}".format(fd, len_check, match_check))
+        check_duplicates_train = check_not_has_duplicates(filelist_train)
+        check_duplicates_val = check_not_has_duplicates(filelist_validatioin)
+        print("[fold{}] {}, {}, {}, {}".format(fd, len_check, match_check, check_duplicates_train, check_duplicates_val))
 
     print("=" * 100)
     print("[Verify that train/validation and test are not covered]")
@@ -108,11 +118,11 @@ def verify_datasets(save_dir, fold_num, total_train_val):  # data leakageがな�
 
         matched_list = list(set(filelist_train + filelist_validatioin) & set(filelist_test))
         match_check = True if len(matched_list) == 0 else False
-        print("[fold{}] {}".format(fd, match_check))
-
-
-def remove_duplicates(l:list):
-    return list(set(l))
+        len_check = len(np.unique(filelist_train + filelist_validatioin + filelist_test)) == total
+        check_duplicates_train = check_not_has_duplicates(filelist_train)
+        check_duplicates_val = check_not_has_duplicates(filelist_validatioin)
+        check_duplicates_test = check_not_has_duplicates(filelist_test)
+        print("[fold{}] {}, {}, {}, {}, {}".format(fd, match_check, len_check, check_duplicates_train, check_duplicates_val, check_duplicates_test))
 
 
 def main(args):
@@ -153,9 +163,11 @@ def main(args):
             train_val_filepath_list = create_filepath_list_from_well_plate_path_list(train_val_well_plate_path_list)
             test_filepath_list = create_filepath_list_from_well_plate_path_list(test_well_plate_path_list)
 
-            # remove duplicates
-            train_val_filepath_list = remove_duplicates(train_val_filepath_list)
-            test_filepath_list = remove_duplicates(test_filepath_list)
+            # check and remove duplicates
+            if not check_not_has_duplicates(train_val_filepath_list):
+                train_val_filepath_list = remove_duplicates(train_val_filepath_list)
+            if not check_not_has_duplicates(test_filepath_list):
+                test_filepath_list = remove_duplicates(test_filepath_list)
 
             print('total file num: {}'.format(len(train_val_filepath_list) + len(test_filepath_list)))
             print('total file num (train+validation): {}'.format(len(train_val_filepath_list)))
@@ -183,9 +195,11 @@ def main(args):
             train_val_filepath_list = create_filepath_list_from_well_id(train_val_well_id_list, filepath_list)
             test_filepath_list = create_filepath_list_from_well_id(test_well_id_list, filepath_list)
 
-            # remove duplicates
-            train_val_filepath_list = remove_duplicates(train_val_filepath_list)
-            test_filepath_list = remove_duplicates(test_filepath_list)
+            # check and remove duplicates
+            if not check_not_has_duplicates(train_val_filepath_list):
+                train_val_filepath_list = remove_duplicates(train_val_filepath_list)
+            if not check_not_has_duplicates(test_filepath_list):
+                test_filepath_list = remove_duplicates(test_filepath_list)
 
             print('total file num: {}'.format(len(train_val_filepath_list)+len(test_filepath_list)))
             print('total file num (train+validation): {}'.format(len(train_val_filepath_list)))
@@ -209,9 +223,11 @@ def main(args):
                 if not filepath in test_filepath_list:
                     train_val_filepath_list.append(filepath)
 
-            # remove duplicates
-            train_val_filepath_list = remove_duplicates(train_val_filepath_list)
-            test_filepath_list = remove_duplicates(test_filepath_list)
+            # check and remove duplicates
+            if not check_not_has_duplicates(train_val_filepath_list):
+                train_val_filepath_list = remove_duplicates(train_val_filepath_list)
+            if not check_not_has_duplicates(test_filepath_list):
+                test_filepath_list = remove_duplicates(test_filepath_list)
 
             print('total file num: {}'.format(len(train_val_filepath_list) + len(test_filepath_list)))
             print('total file num (train+validation): {}'.format(len(train_val_filepath_list)))
@@ -226,7 +242,9 @@ def main(args):
         write_list_to_txt(savefilepath=f"{save_dir}/test.txt", path_list=test_filepath_list)
 
         # verify filepath_list
-        verify_datasets(save_dir=save_dir, fold_num=fold_num, total_train_val=len(train_val_filepath_list))
+        verify_datasets(save_dir=save_dir, fold_num=fold_num,
+                        total_train_val=len(train_val_filepath_list),
+                        total=len(train_val_filepath_list+test_filepath_list))
 
         print('='*100)
         print('Finish')
