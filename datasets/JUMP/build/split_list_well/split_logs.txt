@@ -8,15 +8,15 @@ total file num (test): 2484
 [fold2] train: 8505, validation: 2835
 [fold3] train: 8505, validation: 2835
 [Verify that train and validation are not covered]
-[fold0] True, True
-[fold1] True, True
-[fold2] True, True
-[fold3] True, True
+[fold0] True, True, True, True
+[fold1] True, True, True, True
+[fold2] True, True, True, True
+[fold3] True, True, True, True
 ====================================================================================================
 [Verify that train/validation and test are not covered]
-[fold0] True
-[fold1] True
-[fold2] True
-[fold3] True
+[fold0] True, True, True, True, True
+[fold1] True, True, True, True, True
+[fold2] True, True, True, True, True
+[fold3] True, True, True, True, True
 ====================================================================================================
 Finish
