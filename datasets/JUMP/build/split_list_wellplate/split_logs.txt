@@ -2,6 +2,7 @@
 ====================================================================================================
 total well num (train+validation): 3
 total well num (test): 1
+total file num: 13824
 total file num (train+validation): 10368
 total file num (test): 3456
 [fold0] train: 7776, validation: 2592
