@@ -116,7 +116,6 @@ class cWGANGPTrainer(object):
                 torch.cuda.set_rng_state(last_data['torch_cuda_random_state'])
 
         validator = cWGANGPTester(**validator_args)
-        memory_list = []
 
         for epoch in range(self.last_epoch, self.epoch_num):
             print("Epoch: {}/{}".format(epoch+1, self.epoch_num))
@@ -136,19 +135,12 @@ class cWGANGPTrainer(object):
             # save logs
             self._save_log(epoch, out_train, out_val)
 
-            # check best model
-            self._check_model(model_G, model_D, out_val, epoch)
-
-            # memory manage
-            mem = float(torch.cuda.memory_allocated()/1024**2)
-            print("memory (MiB): ", mem)
-            memory_list.append(mem)
-
             # save final model
             self._save_final_model(model_G, model_D, train_iterator, epoch)
 
-        memory_list = memory_list[1:]  # ind1は多くなる傾向があるため
-        print("Memory increased  (MiB):", np.max(memory_list)-np.min(memory_list))
+            # check best model
+            self._check_model(model_G, model_D, out_val, epoch)
+
         show_loss_GAN(
             log_path=os.path.join(self.save_dir, "log.json"),
             save_dir=self.save_dir,
@@ -985,12 +977,13 @@ class I2SBTrainer(object):
             # save logs
             self._save_log(epoch, out_train, out_val)
 
+            # save final model
+            self._save_final_model(model, train_iterator, epoch)
+
             if out_val is not None:
                 # check best model
                 self._check_model(model, out_val, epoch)
 
-                # save final model
-                #self._save_final_model(model, train_iterator, epoch)
 
         show_loss_distributed(
             log_path=os.path.join(self.save_dir, "log.json"),
@@ -1374,12 +1367,12 @@ class I2SBDistributedTrainer(object):
             # save logs
             self._save_log(epoch, out_train, out_val)
 
+            # save final model
+            self._save_final_model(model, train_iterator, epoch)
+
             if out_val is not None:
                 # check best model
                 self._check_model(model, out_val, epoch)
-
-                # save final model
-                #self._save_final_model(model, train_iterator, epoch)
 
         show_loss_distributed(
             log_path=os.path.join(self.save_dir, "log.json"),
@@ -1748,11 +1741,11 @@ class PaletteTrainer(object):
             # save logs
             self._save_log(epoch, out_train, out_val)
 
-            # check best model
-            self._check_model(model, out_val, epoch)
-
             # save final model
             self._save_final_model(model, train_iterator, epoch)
+
+            # check best model
+            self._check_model(model, out_val, epoch)
 
         show_loss(
             log_path=os.path.join(self.save_dir, "log.json"),
@@ -2136,12 +2129,12 @@ class cWSBGPTrainer(object):
             # save logs
             self._save_log(epoch, out_train, out_val)
 
+            # save final model
+            self._save_final_model(model_G, model_D, train_iterator, epoch)
+
             if out_val is not None:
                 # check best model
                 self._check_model(model_G, model_D,  out_val, epoch)
-
-                # save final model
-                #self._save_final_model(model, train_iterator, epoch)
 
         show_loss_WSB(
             log_path=os.path.join(self.save_dir, "log.json"),

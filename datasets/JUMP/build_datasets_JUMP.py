@@ -4,7 +4,7 @@ import numpy as np
 from glob import glob
 
 
-def gather_position(path_list: list):  # positionをまとめるa[:a.find('-')]
+def gather_position(path_list: list):  # positionをまとめる<pos>-<channel>
     pos_list = []
     for p in path_list:
         filename = os.path.basename(p)
