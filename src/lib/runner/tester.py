@@ -123,8 +123,12 @@ class cWGANGPTester(object):
                     fake_imgs_image_uint8_bgr = cv2.cvtColor(fake_imgs_image_uint8, cv2.COLOR_RGB2BGR)
                     cv2.imwrite(f"{save_dir_img}/generated_{self.file_list[cnt]}.png", fake_imgs_image_uint8_bgr)
             else:
+                print(self.file_list[cnt])
                 save_dir_img_each = check_dir(f"{save_dir_img}/{self.file_list[cnt]}")
+                print(save_dir_img_each)
+
                 for channel_ind in range(len(self.output_channel_list)):
+                    print(self.output_channel_list[channel_ind])
                     fake_imgs_image_channel = fake_imgs_image[:, :, channel_ind]
                     save_image_function(save_dir=save_dir_img_each,
                                         filename=self.output_channel_list[channel_ind],
@@ -137,6 +141,8 @@ class cWGANGPTester(object):
                                                      flag_artifact=True,
                                                      data_range=self.data_range,
                                                      image_dtype=self.image_dtype)
+                print(save_dir_img_each_composite)
+                print(f"Composite_{self.file_list[cnt]}")
                 save_image_function(save_dir=save_dir_img_each_composite,
                                     filename=f"Composite_{self.file_list[cnt]}",
                                     img=composite)
