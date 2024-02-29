@@ -269,7 +269,7 @@ class cWGANGPTrainer(object):
 
         elapsed_time = time.time() - start
 
-        print("[train] loss G: {:.4f}, D: {:.4f} | {}, elapsed time: {} s". \
+        print("[train] loss G: {}, D: {} | {}, elapsed time: {} s". \
               format(loss_G_mean, loss_D_mean, self._print_eval_statics(evaluates_dict), int(np.floor(elapsed_time))))
 
         return loss_G_list, loss_D_list, evaluates_dict
@@ -479,7 +479,7 @@ class cWGANGPTrainer(object):
                 val = np.mean(channel_value)
                 vals.append(val)
             vals_mean = np.mean(vals)
-            text = str(key).replace("", "") + ": " + "{:.4f}".format(vals_mean)
+            text = str(key).replace("", "") + ": " + "{}".format(vals_mean)
             out.append(text)
         return ", ".join(out)
 
@@ -690,7 +690,7 @@ class guidedI2ITrainer(object):
 
         elapsed_time = time.time() - start
 
-        print("[train] loss: {:.4f}, elapsed time: {} s". \
+        print("[train] loss: {}, elapsed time: {} s". \
               format(loss_mean, int(np.floor(elapsed_time))))
 
         return loss_list, None
@@ -832,7 +832,7 @@ class guidedI2ITrainer(object):
                 val = np.mean(channel_value)
                 vals.append(val)
             vals_mean = np.mean(vals)
-            text = str(key).replace("", "") + ": " + "{:.4f}".format(vals_mean)
+            text = str(key).replace("", "") + ": " + "{}".format(vals_mean)
             out.append(text)
         return ", ".join(out)
 
@@ -1224,7 +1224,7 @@ class I2SBTrainer(object):
                 val = np.mean(channel_value)
                 vals.append(val)
             vals_mean = np.mean(vals)
-            text = str(key).replace("", "") + ": " + "{:.4f}".format(vals_mean)
+            text = str(key).replace("", "") + ": " + "{}".format(vals_mean)
             out.append(text)
         return ", ".join(out)
 
@@ -1606,7 +1606,7 @@ class I2SBDistributedTrainer(object):
                 val = np.mean(channel_value)
                 vals.append(val)
             vals_mean = np.mean(vals)
-            text = str(key).replace("", "") + ": " + "{:.4f}".format(vals_mean)
+            text = str(key).replace("", "") + ": " + "{}".format(vals_mean)
             out.append(text)
         return ", ".join(out)
 
@@ -1813,7 +1813,7 @@ class PaletteTrainer(object):
 
         elapsed_time = time.time() - start
 
-        print("[train] loss: {:.4f}, elapsed time: {} s". \
+        print("[train] loss: {}, elapsed time: {} s". \
               format(loss_mean, int(np.floor(elapsed_time))))
 
         return loss_list, None
@@ -1955,7 +1955,7 @@ class PaletteTrainer(object):
                 val = np.mean(channel_value)
                 vals.append(val)
             vals_mean = np.mean(vals)
-            text = str(key).replace("", "") + ": " + "{:.4f}".format(vals_mean)
+            text = str(key).replace("", "") + ": " + "{}".format(vals_mean)
             out.append(text)
         return ", ".join(out)
 
@@ -2117,7 +2117,7 @@ class cWSBGPTrainer(object):
                 print("Epoch: {}/{}, Time: {}".format(epoch + 1, self.epoch_num, today.strftime('%Y/%m/%d %H:%M:%S')))
                 loss_G_mean = float(abs(np.mean(out_train[0])))
                 loss_D_mean = float(abs(np.mean(out_train[1])))
-                print("[train] loss G: {:.4f}, loss D: {:.4f}".format(loss_G_mean, loss_D_mean))
+                print("[train] loss G: {}, loss D: {}".format(loss_G_mean, loss_D_mean))
 
             if epoch % self.val_per_epoch == 0:
                 '''Validation'''
@@ -2272,7 +2272,7 @@ class cWSBGPTrainer(object):
 
         # elapsed_time = time.time() - start
         #
-        # print("[train] loss G: {:.4f}, D: {:.4f} | {}, elapsed time: {} s". \
+        # print("[train] loss G: {}, D: } | {}, elapsed time: {} s". \
         #       format(loss_G_mean, loss_D_mean, self._print_eval_statics(evaluates_dict), int(np.floor(elapsed_time))))
 
         return loss_G_list, loss_D_list, None
@@ -2513,7 +2513,7 @@ class cWSBGPTrainer(object):
                 val = np.mean(channel_value)
                 vals.append(val)
             vals_mean = np.mean(vals)
-            text = str(key).replace("", "") + ": " + "{:.4f}".format(vals_mean)
+            text = str(key).replace("", "") + ": " + "{}".format(vals_mean)
             out.append(text)
         return ", ".join(out)
 
