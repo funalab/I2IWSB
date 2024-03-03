@@ -724,12 +724,12 @@ class guidedI2ITester(object):
                         else:
                             channel_name = channel
                         save_image_function(save_dir=save_dir_each_b,
-                                            filename=f"{names[i]}_channel_{channel_name}",
+                                            filename=f"{id}_channel_{channel_name}",
                                             img=im)
                     if im_out_b.shape[0] == 1 or im_out_b.shape[0] == 3:
                         im_out_b = self._convert_tensor_to_image(im_out_b)
                         save_image_function(save_dir=save_dir_each_b,
-                                            filename=f"{names[i]}",
+                                            filename=f"{id}",
                                             img=im_out_b)
                 else:
                     im_out_b = im_out.copy()
@@ -743,12 +743,12 @@ class guidedI2ITester(object):
                         else:
                             channel_name = channel
                         save_image_function(save_dir=save_dir_each,
-                                            filename=f"{names[i]}_channel_{channel_name}",
+                                            filename=f"{id}_channel_{channel_name}",
                                             img=im)
                     if im_out_b.shape[0] == 1 or im_out_b.shape[0] == 3:
                         im_out_b = self._convert_tensor_to_image(im_out_b)
                         save_image_function(save_dir=save_dir_each,
-                                            filename=f"{names[i]}",
+                                            filename=f"{id}",
                                             img=im_out_b)
                     else:
                         save_dir_img_each_composite = check_dir(f"{save_dir_each}/Composite")
@@ -759,7 +759,7 @@ class guidedI2ITester(object):
                                                              data_range=self.data_range,
                                                              image_dtype=self.image_dtype)
                         save_image_function(save_dir=save_dir_img_each_composite,
-                                            filename=f"{names[i]}",
+                                            filename=f"{id}",
                                             img=composite)
 
 def make_beta_schedule_for_I2SB(n_timestep=1000, linear_start=1e-4, linear_end=2e-2):
@@ -1754,12 +1754,12 @@ class PaletteTester(object):
                         else:
                             channel_name = channel
                         save_image_function(save_dir=save_dir_each_b,
-                                            filename=f"{names[i]}_channel_{channel_name}",
+                                            filename=f"{id}_channel_{channel_name}",
                                             img=im)
                     if im_out_b.shape[0] == 1 or im_out_b.shape[0] == 3:
                         im_out_b = self._convert_tensor_to_image(im_out_b)
                         save_image_function(save_dir=save_dir_each_b,
-                                            filename=f"{names[i]}",
+                                            filename=f"{id}",
                                             img=im_out_b)
                 else:
                     im_out_b = im_out.copy()
@@ -1773,12 +1773,12 @@ class PaletteTester(object):
                         else:
                             channel_name = channel
                         save_image_function(save_dir=save_dir_each,
-                                            filename=f"{names[i]}_channel_{channel_name}",
+                                            filename=f"{id}_channel_{channel_name}",
                                             img=im)
                     if im_out_b.shape[0] == 1 or im_out_b.shape[0] == 3:
                         im_out_b = self._convert_tensor_to_image(im_out_b)
                         save_image_function(save_dir=save_dir_each,
-                                            filename=f"{names[i]}",
+                                            filename=f"{id}",
                                             img=im_out_b)
                     else:
                         save_dir_img_each_composite = check_dir(f"{save_dir_each}/Composite")
@@ -1806,7 +1806,7 @@ class PaletteTester(object):
                                                                  image_dtype=self.image_dtype)
 
                         save_image_function(save_dir=save_dir_img_each_composite,
-                                            filename=f"{names[i]}",
+                                            filename=f"{id}",
                                             img=composite)
 
 '''
