@@ -698,7 +698,6 @@ class guidedI2ITester(object):
         for i in range(len(names)):
             name = names[i]
             id = name[name.find("-")+1:]
-            print(id)
             mode = name[:name.find("-")]
             save_dir_each = check_dir(f"{save_dir}/{id}/{mode}")
 
