@@ -24,3 +24,4 @@ requirements_dev.txt
 /datasets_JUMP/illum/
 /datasets_JUMP/load_data_csv/
 /datasets_JUMP/images/
+/notebooks/visualize_ground_truth/
