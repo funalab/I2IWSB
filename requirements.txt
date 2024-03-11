@@ -12,3 +12,4 @@ tqdm==4.65.0
 torch_ema==0.3
 prefetch_generator==1.0.3
 imagecodecs==2024.1.1
+torchinfo==1.8.0

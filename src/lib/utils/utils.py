@@ -298,3 +298,18 @@ def save_image_function(save_dir, filename, img):
         io.imsave(f"{save_dir}/{filename}.png",
                   img,
                   check_contrast=False)
+
+def calculate_inputsize(args):
+    batch_size = int(args.batchsize)
+    channel = max(int(args.in_channels), int(args.out_channels)) if eval(args.dim_match) else int(args.in_channels)
+    if eval(args.crop_size) != 'None':
+        if eval(args.resize) != 'None':
+            img_size = eval(args.resize)
+        else:
+            img_size = eval(args.crop_size)
+    else:
+        if eval(args.resize) != 'None':
+            img_size = eval(args.resize)
+        else:
+            img_size = eval(args.image_size)
+    return (batch_size, channel, img_size[0], img_size[1])

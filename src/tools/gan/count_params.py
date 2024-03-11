@@ -10,7 +10,8 @@ from src.lib.datasets.dataset import get_test_dataset
 from src.lib.datasets.dataloader import get_test_iterator
 from src.lib.runner.get_runner_args import get_test_args
 from src.lib.runner.trainer import cWGANGPTester
-
+from src.lib.utils.utils import calculate_inputsize
+from torchinfo import summary
 
 def main():
 
@@ -24,13 +25,6 @@ def main():
     # Prepare device
     device = get_device(args=args)
 
-    ''' Dataset '''
-    # Load datasets
-    test_dataset = get_test_dataset(args=args)
-
-    # Create dataloader
-    test_iterator = get_test_iterator(args=args, test_dataset=test_dataset)
-
     ''' Model '''
     # Get the pretrained model
     model_G, model_D, best_model_dir = get_test_model_GAN(args=args, device=device)
@@ -38,16 +32,18 @@ def main():
     # Create directory
     save_dir = create_test_dir(args=args, best_model_dir=best_model_dir)
 
-    ''' Test '''
-    tester_args = get_test_args(args, save_dir, device, test_dataset)
-    tester = cWGANGPTester(**tester_args)
+    # input size
+    input_size = calculate_inputsize(args=args)
 
-    _, _, _ = tester.test(
-        model_G=model_G,
-        model_D=model_D,
-        data_iter=test_iterator,
-        phase='test',
-    )
+    summary_G = summary(model=model_G, input_size=input_size)
+
+    with open(f'{save_dir}/params_count_G.txt', 'w') as f:
+        print(summary_G, file=f)
+
+    summary_D = summary(model=model_D, input_size=input_size)
+
+    with open(f'{save_dir}/params_count_D.txt', 'w') as f:
+        print(summary_D, file=f)
 
 
 if __name__ == '__main__':
