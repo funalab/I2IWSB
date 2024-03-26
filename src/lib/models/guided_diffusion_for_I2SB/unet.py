@@ -622,6 +622,7 @@ class UNetModel(nn.Module):
             nn.SiLU(),
             zero_module(conv_nd(dims, input_ch, out_channels, 3, padding=1)),
         )
+        print(self.input_blocks)
 
     def convert_to_fp16(self):
         """
