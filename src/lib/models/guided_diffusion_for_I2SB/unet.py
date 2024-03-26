@@ -486,10 +486,7 @@ class UNetModel(nn.Module):
             self.label_emb = nn.Embedding(num_classes, time_embed_dim)
 
         ch = input_ch = int(channel_mult[0] * model_channels)
-        print(channel_mult)
-        print(model_channels)
-        print(input_ch)
-        print(ch)
+
         self.input_blocks = nn.ModuleList(
             [TimestepEmbedSequential(conv_nd(dims, in_channels, ch, 3, padding=1))]
         )
@@ -547,7 +544,7 @@ class UNetModel(nn.Module):
                 input_block_chans.append(ch)
                 ds *= 2
                 self._feature_size += ch
-
+        print(ch)
         self.middle_block = TimestepEmbedSequential(
             ResBlock(
                 ch,
