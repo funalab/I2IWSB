@@ -167,7 +167,7 @@ def create_model(
         else:
             raise ValueError(f"unsupported image size: {image_size}")
     else:
-        channel_mult = tuple(int(ch_mult) for ch_mult in channel_mult.split(","))
+        channel_mult = tuple(int(ch_mult) for ch_mult in channel_mult) # channel_mult.split(",")
 
     attention_ds = []
     for res in attention_resolutions.split(","):
