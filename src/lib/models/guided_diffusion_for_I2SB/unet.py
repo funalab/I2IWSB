@@ -544,7 +544,7 @@ class UNetModel(nn.Module):
                 input_block_chans.append(ch)
                 ds *= 2
                 self._feature_size += ch
-        print(ch)
+
         self.middle_block = TimestepEmbedSequential(
             ResBlock(
                 ch,
@@ -661,13 +661,19 @@ class UNetModel(nn.Module):
             emb = emb + self.label_emb(y)
 
         h = x.type(self.dtype)
+        print(h.shape)
         for module in self.input_blocks:
             h = module(h, emb)
+            print(h.shape)
             hs.append(h)
         h = self.middle_block(h, emb)
+        print(h.shape)
         for module in self.output_blocks:
             h = th.cat([h, hs.pop()], dim=1)
+            print('-'*100)
+            print(h.shape)
             h = module(h, emb)
+            print(h.shape)
         h = h.type(x.dtype)
         return self.out(h)
 
