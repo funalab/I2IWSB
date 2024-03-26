@@ -661,13 +661,16 @@ class UNetModel(nn.Module):
             emb = emb + self.label_emb(y)
 
         h = x.type(self.dtype)
+        print('*' * 100)
         print(h.shape)
         for module in self.input_blocks:
             h = module(h, emb)
             print(h.shape)
             hs.append(h)
         h = self.middle_block(h, emb)
+        print('?' * 100)
         print(h.shape)
+        print('?' * 100)
         for module in self.output_blocks:
             h = th.cat([h, hs.pop()], dim=1)
             print('-'*100)
@@ -679,7 +682,9 @@ class UNetModel(nn.Module):
         print(h.shape)
         out = self.out(h)
         print(out.shape)
-        return out
+        print('*' * 100)
+        raise NotImplementedError
+        #return out
 
 
 class SuperResModel(UNetModel):
