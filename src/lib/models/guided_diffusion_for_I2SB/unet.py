@@ -675,7 +675,11 @@ class UNetModel(nn.Module):
             h = module(h, emb)
             print(h.shape)
         h = h.type(x.dtype)
-        return self.out(h)
+        print('='*100)
+        print(h.shape)
+        out = self.out(h)
+        print(out.shape)
+        return out
 
 
 class SuperResModel(UNetModel):
