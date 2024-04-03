@@ -9,6 +9,7 @@
 
 ### Datasets
 - JUMP-Cell Painting Consortium
+  - 明視野顕微鏡像 to 蛍光顕微鏡像の画像変換タスクに利用
   - https://jump-cellpainting.broadinstitute.org/
 
 ### Models

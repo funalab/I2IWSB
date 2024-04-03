@@ -47,7 +47,7 @@ def get_train_model_GAN(args, device):
     else:
         raise NotImplementedError
 
-    if hasattr(args, 'init_model') and args.init_model is not None :
+    if hasattr(args, 'init_model') and args.init_model is not None:
         stdict_G = torch.load(f"{str(args.init_model)}/train/last_epoch_object.cpt")['model_G']
         stdict_D = torch.load(f"{str(args.init_model)}/train/last_epoch_object.cpt")['model_D']
 
