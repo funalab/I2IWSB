@@ -11,6 +11,9 @@
 - Arxiv, 3 Feb 2024
   - https://arxiv.org/abs/2402.02203
 
+- Nat. Methods, 9 Apr 2024 (CPJUMP1: cpg0000-jump-pilot)
+  - https://www.nature.com/articles/s41592-024-02241-6
+
 - AWS
   - https://registry.opendata.aws/cellpainting-gallery/
 

@@ -132,6 +132,7 @@ def main(args):
     test_split_mode = str(args.test_split_mode)
     fold_num = int(args.fold_num)
     seed = int(args.seed)
+    select_wellplate = eval(args.select_wellplate)
 
     # create save path
     if not os.path.exists(save_dir):
@@ -141,6 +142,10 @@ def main(args):
     rg = np.random.default_rng(seed)
 
     well_plate_path_list = glob(f"{root_path}/images/*")
+    if len(select_wellplate) > 0:
+        well_plate_path_list = [p for p in well_plate_path_list if os.path.basename(p) in select_wellplate]
+        assert len(well_plate_path_list) == len(select_wellplate), \
+            f'Cannot select wellplate correctly, {select_wellplate}'
 
     with open(f'{save_dir}/split_logs.txt', 'w') as f:
         print(f"[Split mode] {test_split_mode}")
@@ -259,6 +264,7 @@ if __name__ == '__main__':
                         help='choice test split mode [wellplate, well random]')
     parser.add_argument('--fold_num', type=int, help='set number of cross-validation fold')
     parser.add_argument('--seed', type=int, help='random seed', default=0)
+    parser.add_argument('--select_wellplate', type=str, help='set wellplate names to select', default='[]')
     args = parser.parse_args()
 
     main(args=args)
