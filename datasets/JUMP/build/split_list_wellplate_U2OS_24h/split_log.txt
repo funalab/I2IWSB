@@ -1,0 +1,31 @@
+[Split mode] wellplate
+====================================================================================================
+total well num (train+validation): 3
+total well num (test): 1
+total file num: 13824
+total file num (train+validation): 10368
+total file num (test): 3456
+[fold0] train: 8295, validation: 2073
+[fold1] train: 8295, validation: 2073
+[fold2] train: 8295, validation: 2073
+[fold3] train: 8295, validation: 2073
+[fold4] train: 8295, validation: 2073
+[Verify that train and validation are not covered]
+[fold0] True, True, True, True
+[fold1] True, True, True, True
+[fold2] True, True, True, True
+[fold3] True, True, True, True
+[fold4] True, True, True, True
+====================================================================================================
+[Verify that train/validation and test are not covered]
+[fold0] True, True, True, True, True
+[fold1] True, True, True, True, True
+[fold2] True, True, True, True, True
+[fold3] True, True, True, True, True
+[fold4] True, True, True, True, True
+====================================================================================================
+Finish
+test: 3456
+test (extracted): 384
+finish
+
