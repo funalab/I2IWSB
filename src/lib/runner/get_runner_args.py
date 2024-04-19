@@ -119,6 +119,9 @@ def get_test_args_DF(args, save_dir, device, test_dataset):
     if hasattr(args, 'table_label'):
         tester_args['table_label'] = eval(args.table_label)
 
+    if hasattr(args, 'image_save_num'):
+        tester_args['image_save_num'] = int(args.image_save_num)
+
     if hasattr(args, 'dim_match'):
         tester_args['dim_match'] = eval(args.dim_match)
         if hasattr(args, 'input_dim_label'):
@@ -173,9 +176,11 @@ def get_test_args(args, save_dir, device, test_dataset):
     if hasattr(args, 'table_label'):
         tester_args['table_label'] = eval(args.table_label)
 
+    if hasattr(args, 'image_save_num'):
+        tester_args['image_save_num'] = int(args.image_save_num)
+
     if str(args.model) == 'cWGAN-GP':
         tester_args['lamb'] = str(args.lamb)  # gradient penaltyの強さ
-
 
     return tester_args
 
@@ -253,6 +258,9 @@ def get_test_args_WSB(args, save_dir, device, test_dataset):
         tester_args['table_artifact'] = eval(args.table_artifact)
     if hasattr(args, 'table_label'):
         tester_args['table_label'] = eval(args.table_label)
+
+    if hasattr(args, 'image_save_num'):
+        tester_args['image_save_num'] = int(args.image_save_num)
 
     if hasattr(args, 'dim_match'):
         tester_args['dim_match'] = eval(args.dim_match)

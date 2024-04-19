@@ -46,6 +46,7 @@ class cWGANGPTester(object):
         self.batch_size = kwargs['batch_size'] if 'batch_size' in kwargs else None
         self.gen_criterion = GenLoss()
         self.image_save = kwargs['image_save'] if 'image_save' in kwargs else False
+        self.image_save_num = kwargs['image_save_num'] if 'image_save_num' in kwargs else 10**5
 
         self.file_list = kwargs['file_list'] if 'file_list' in kwargs else None
         self.input_channel_list = kwargs['input_channel_list'] if 'input_channel_list' in kwargs else None
@@ -112,38 +113,39 @@ class cWGANGPTester(object):
         ssims, mses, maes, psnrs = self._evaluate(fake_imgs, real_imgs, phase, cnt)
 
         if phase == 'test' and self.image_save:
-            # number = str(cnt).zfill(4)
-            fake_imgs_image = self._convert_tensor_to_image(fake_imgs)
-            if len(self.output_channel_list) == 0:  # rgb
-                fake_imgs_image_bgr = cv2.cvtColor(fake_imgs_image, cv2.COLOR_RGB2BGR)
-                cv2.imwrite(f"{save_dir_img}/generated_{self.file_list[cnt]}.tif", fake_imgs_image_bgr)
-                if self.image_dtype != 'uint8':
-                    fake_imgs_image_uint8 = (fake_imgs_image / self.data_range) * 255
-                    fake_imgs_image_uint8 = fake_imgs_image_uint8.astype('uint8')
-                    fake_imgs_image_uint8_bgr = cv2.cvtColor(fake_imgs_image_uint8, cv2.COLOR_RGB2BGR)
-                    cv2.imwrite(f"{save_dir_img}/generated_{self.file_list[cnt]}.png", fake_imgs_image_uint8_bgr)
-            else:
-                name = os.path.basename(self.file_list[cnt])
-                save_dir_img_each = check_dir(f"{save_dir_img}/{name}")
+            if cnt < self.image_save_num:
+                # number = str(cnt).zfill(4)
+                fake_imgs_image = self._convert_tensor_to_image(fake_imgs)
+                if len(self.output_channel_list) == 0:  # rgb
+                    fake_imgs_image_bgr = cv2.cvtColor(fake_imgs_image, cv2.COLOR_RGB2BGR)
+                    cv2.imwrite(f"{save_dir_img}/generated_{self.file_list[cnt]}.tif", fake_imgs_image_bgr)
+                    if self.image_dtype != 'uint8':
+                        fake_imgs_image_uint8 = (fake_imgs_image / self.data_range) * 255
+                        fake_imgs_image_uint8 = fake_imgs_image_uint8.astype('uint8')
+                        fake_imgs_image_uint8_bgr = cv2.cvtColor(fake_imgs_image_uint8, cv2.COLOR_RGB2BGR)
+                        cv2.imwrite(f"{save_dir_img}/generated_{self.file_list[cnt]}.png", fake_imgs_image_uint8_bgr)
+                else:
+                    name = os.path.basename(self.file_list[cnt])
+                    save_dir_img_each = check_dir(f"{save_dir_img}/{name}")
 
-                for channel_ind in range(len(self.output_channel_list)):
-                    filename_ch = f"{name}_channel_{self.output_channel_list[channel_ind]}"
-                    fake_imgs_image_channel = fake_imgs_image[:, :, channel_ind]
-                    save_image_function(save_dir=save_dir_img_each,
-                                        filename=filename_ch,
-                                        img=fake_imgs_image_channel)
+                    for channel_ind in range(len(self.output_channel_list)):
+                        filename_ch = f"{name}_channel_{self.output_channel_list[channel_ind]}"
+                        fake_imgs_image_channel = fake_imgs_image[:, :, channel_ind]
+                        save_image_function(save_dir=save_dir_img_each,
+                                            filename=filename_ch,
+                                            img=fake_imgs_image_channel)
 
-                save_dir_img_each_composite = check_dir(f"{save_dir_img_each}/Composite")
-                composite = convert_channels_to_rgbs(images=fake_imgs_image,
-                                                     table_label=self.table_label,
-                                                     table_artifact=self.table_artifact,
-                                                     flag_artifact=True,
-                                                     data_range=self.data_range,
-                                                     image_dtype=self.image_dtype)
+                    save_dir_img_each_composite = check_dir(f"{save_dir_img_each}/Composite")
+                    composite = convert_channels_to_rgbs(images=fake_imgs_image,
+                                                         table_label=self.table_label,
+                                                         table_artifact=self.table_artifact,
+                                                         flag_artifact=True,
+                                                         data_range=self.data_range,
+                                                         image_dtype=self.image_dtype)
 
-                save_image_function(save_dir=save_dir_img_each_composite,
-                                    filename=name,
-                                    img=composite)
+                    save_image_function(save_dir=save_dir_img_each_composite,
+                                        filename=name,
+                                        img=composite)
 
         return loss_D, loss_G, ssims, mses, maes, psnrs
 
@@ -354,6 +356,7 @@ class guidedI2ITester(object):
         self.batch_size = kwargs['batch_size'] if 'batch_size' in kwargs else None
 
         self.image_save = kwargs['image_save'] if 'image_save' in kwargs else False
+        self.image_save_num = kwargs['image_save_num'] if 'image_save_num' in kwargs else 10 ** 5
 
         self.file_list = kwargs['file_list'] if 'file_list' in kwargs else None
         self.input_channel_list = kwargs['input_channel_list'] if 'input_channel_list' in kwargs else None
@@ -482,10 +485,11 @@ class guidedI2ITester(object):
                     fake_imgs = fake_imgs.to(torch.device(self.device)).clone().detach()
 
             if phase == 'test' and self.image_save:
-                results = self._save_current_results(path=self.file_list[cnt],
-                                                     gt_image=real_imgs,
-                                                     visuals=visuals)
-                self._save_images_test(save_dir=save_dir_img, results=results)
+                if cnt < self.image_save_num:
+                    results = self._save_current_results(path=self.file_list[cnt],
+                                                         gt_image=real_imgs,
+                                                         visuals=visuals)
+                    self._save_images_test(save_dir=save_dir_img, results=results)
 
         ssims, mses, maes, psnrs = None, None, None, None
         if self._check_flag(phase=phase):
@@ -781,6 +785,7 @@ class I2SBTester(object):
         self.batch_size = kwargs['batch_size'] if 'batch_size' in kwargs else None
 
         self.image_save = kwargs['image_save'] if 'image_save' in kwargs else False
+        self.image_save_num = kwargs['image_save_num'] if 'image_save_num' in kwargs else 10 ** 5
 
         self.file_list = kwargs['file_list'] if 'file_list' in kwargs else None
         self.in_channels = kwargs['in_channels'] if 'in_channels' in kwargs else None
@@ -991,11 +996,12 @@ class I2SBTester(object):
                     fake_imgs_for_evaluate = torch.unsqueeze(fake_imgs_for_evaluate, axis=0)
 
             if phase == 'test' and self.image_save:
-                self._save_images_test(path=self.file_list[cnt],
-                                       save_dir=save_dir_img,
-                                       real_imgs=x0_for_evaluate.detach().clone().float().cpu(),
-                                       fake_imgs=fake_imgs_for_evaluate.detach().clone().float().cpu(),
-                                       visuals=None)
+                if cnt < self.image_save_num:
+                    self._save_images_test(path=self.file_list[cnt],
+                                           save_dir=save_dir_img,
+                                           real_imgs=x0_for_evaluate.detach().clone().float().cpu(),
+                                           fake_imgs=fake_imgs_for_evaluate.detach().clone().float().cpu(),
+                                           visuals=None)
 
             ssims, mses, maes, psnrs = self._evaluate(fake_imgs_for_evaluate, x0_for_evaluate, phase, cnt)
 
@@ -1380,6 +1386,7 @@ class PaletteTester(object):
         self.batch_size = kwargs['batch_size'] if 'batch_size' in kwargs else None
 
         self.image_save = kwargs['image_save'] if 'image_save' in kwargs else False
+        self.image_save_num = kwargs['image_save_num'] if 'image_save_num' in kwargs else 10 ** 5
 
         self.file_list = kwargs['file_list'] if 'file_list' in kwargs else None
         self.in_channels = kwargs['in_channels'] if 'in_channels' in kwargs else None
@@ -1501,10 +1508,11 @@ class PaletteTester(object):
                     fake_imgs = fake_imgs.to(torch.device(self.device)).clone().detach()
 
             if phase == 'test' and self.image_save:
-                results = self._save_current_results(path=self.file_list[cnt],
-                                                     gt_image=real_imgs,
-                                                     visuals=visuals)
-                self._save_images_test(save_dir=save_dir_img, results=results)
+                if cnt < self.image_save_num:
+                    results = self._save_current_results(path=self.file_list[cnt],
+                                                         gt_image=real_imgs,
+                                                         visuals=visuals)
+                    self._save_images_test(save_dir=save_dir_img, results=results)
 
         ssims, mses, maes, psnrs = None, None, None, None
         if self._check_flag(phase=phase):
@@ -1825,6 +1833,7 @@ class cWSBGPTester(object):
         self.lamb = torch.tensor(float(kwargs['lamb'])).float().to(torch.device(self.device))
         self.batch_size = kwargs['batch_size'] if 'batch_size' in kwargs else None
         self.image_save = kwargs['image_save'] if 'image_save' in kwargs else False
+        self.image_save_num = kwargs['image_save_num'] if 'image_save_num' in kwargs else 10 ** 5
         self.mae_loss = nn.L1Loss(reduction='none')
 
         self.file_list = kwargs['file_list'] if 'file_list' in kwargs else None
@@ -2069,11 +2078,12 @@ class cWSBGPTester(object):
                     fake_imgs_for_evaluate = torch.unsqueeze(fake_imgs_for_evaluate, axis=0)
 
             if phase == 'test' and self.image_save:
-                self._save_images_test(path=self.file_list[cnt],
-                                       save_dir=save_dir_img,
-                                       real_imgs=x0_for_evaluate.detach().clone().float().cpu(),
-                                       fake_imgs=fake_imgs_for_evaluate.detach().clone().float().cpu(),
-                                       visuals=None)
+                if cnt < self.image_save_num:
+                    self._save_images_test(path=self.file_list[cnt],
+                                           save_dir=save_dir_img,
+                                           real_imgs=x0_for_evaluate.detach().clone().float().cpu(),
+                                           fake_imgs=fake_imgs_for_evaluate.detach().clone().float().cpu(),
+                                           visuals=None)
 
             ssims, mses, maes, psnrs = self._evaluate(fake_imgs_for_evaluate, x0_for_evaluate, phase, cnt)
         return loss_mse, loss_G, loss_D, ssims, mses, maes, psnrs
