@@ -39,7 +39,7 @@ def create_train_dir(args):
 
 
 def create_test_dir(args, best_model_dir):
-    if eval(args.save_dir) is not None:
+    if str(args.save_dir) != 'None':
         save_dir = check_dir(args.save_dir)
     else:
         relpaces_path = best_model_dir.replace("/train/","/test/")
