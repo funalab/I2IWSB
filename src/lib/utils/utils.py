@@ -45,6 +45,8 @@ def create_test_dir(args, best_model_dir):
         relpaces_path = best_model_dir.replace("/train/","/test/")
         save_dir = check_dir(relpaces_path)
     shutil.copy(args.conf_file, os.path.join(save_dir, os.path.basename(args.conf_file)))
+    print(f"[Confing file path] {args.conf_file}")
+    print(f"[Save directory] {save_dir}")
     return save_dir
 
 def set_seed(args):
