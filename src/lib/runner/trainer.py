@@ -248,8 +248,8 @@ class cWGANGPTrainer(object):
 
             # delete loss_D grad object to avoid memory leak
             del loss_D
-            torch.cuda.empty_cache()
-            gc.collect()
+            #torch.cuda.empty_cache()
+            #gc.collect()
 
         # if scheduler
         if self.scheduler_G is not None:
