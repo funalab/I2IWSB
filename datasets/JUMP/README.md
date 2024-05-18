@@ -26,6 +26,7 @@
 
 - official cpg0000-jump-pilot documentation
   - https://github.com/jump-cellpainting/2023_Chandrasekaran_submitted
+  - https://github.com/jump-cellpainting/JUMP-Target
 
 ### (C) How to download
 #### 1. Create virtual environments using ```venv``` module
