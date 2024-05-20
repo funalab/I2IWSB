@@ -177,7 +177,7 @@ def summarize_by_image_id(paths, gt_mode=False):
 
 
 def plot_dimension_reduction(res, save_dir, name, filename, xlabel, ylabel, pca=None):
-    plt.rcParams["font.family"] = "Arial"
+    #plt.rcParams["font.family"] = "Arial"
     plt.rcParams["font.size"] = 20
     linewidth = 2
 
@@ -424,7 +424,7 @@ def evaluate_compare(x, y, savefilepath=None):
 def show_joint(x, y, savefilepath=None, show_mode=False):
     df = pd.DataFrame(np.squeeze(np.array([x, y]).T), columns=['Ground truth', 'Predict'])
 
-    plt.rcParams["font.family"] = "Arial"
+    #plt.rcParams["font.family"] = "Arial"
     plt.rcParams["font.size"] = 20
     figsize = [6, 6]
 
@@ -490,6 +490,7 @@ def main():
                               save_dir=check_dir(f'{save_dir}/predict'),
                               file_name='analyzed_result',
                               process_num=16)
+    print('analyze ground truth each images...')
     result_df_gt = evaluate_main(summarized_path_dict=summarized_path_gt_dict,
                                  save_dir=check_dir(f'{save_dir}/ground_truth'),
                                  file_name='analyzed_result',
