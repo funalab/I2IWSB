@@ -157,12 +157,15 @@ def get_img_path_gt(args):  # f"{args.root_path}/images/{p}-{channel_id}sk1fk1fl
     return img_path_gt_list
 
 
-def summarize_by_image_id(paths):
+def summarize_by_image_id(paths, gt_mode=False):
     out = {}
     for path in paths:
         filename = os.path.splitext(os.path.basename(path))[0]
         pos = filename[:12]
-        ch = filename[-3:]
+        if gt_mode:
+            ch = filename.split('-')[1][:3]
+        else:
+            ch = filename[-3:]
         id = f"{pos}-{ch}"
         if not id in out.keys():
             out[id] = path
@@ -464,13 +467,13 @@ def main():
     # get each img_path
     print('getting image paths...')
     img_path_list = get_img_path(args=args, img_dir_root=img_dir_root)
-    summarized_path_dict = summarize_by_image_id(paths=img_path_list)
+    summarized_path_dict = summarize_by_image_id(paths=img_path_list, gt_mode=False)
     print(f'img_path size: {len(img_path_list)}')
 
     # get ground truth img_path
     print('getting ground truth image paths...')
     img_path_gt_list = get_img_path_gt(args=args)
-    summarized_path_gt_dict = summarize_by_image_id(paths=img_path_gt_list)
+    summarized_path_gt_dict = summarize_by_image_id(paths=img_path_gt_list, gt_mode=True)
     print(f'img_path size: {len(img_path_gt_list)}')
 
     ''' Analyze images '''
