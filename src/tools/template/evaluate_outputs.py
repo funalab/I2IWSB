@@ -201,7 +201,7 @@ def plot_dimension_reduction(res, save_dir, name, filename, xlabel, ylabel, pca=
     ax.set_axisbelow(True)
 
     plt.savefig(os.path.join(save_dir, f'{filename}.pdf'), bbox_inches="tight", dpi=600)
-    plt.savefig(os.path.join(save_dir, f'{filename}.png'), bbox_inches="tight", dpi=600)
+    #plt.savefig(os.path.join(save_dir, f'{filename}.png'), bbox_inches="tight", dpi=600)
     plt.close()
 
     if name == 'PCA' and pca is not None:
@@ -411,7 +411,7 @@ def evaluate_main(args, summarized_path_dict, save_dir, file_name, gt_mode=False
 def analyze_dataframe(df, save_dir, file_name):
     df_stats_mean = df.drop(columns='pos').groupby('ch').mean()
     df_stats_mean.columns = [f'{d}_mean' for d in df_stats_mean.columns]
-    df_stats_std = df.drop(columns='pos').groupby('ch').std()  # 標本標準偏差 ddof=0
+    df_stats_std = df.drop(columns='pos').groupby('ch').std(ddof=1)  # 標本標準偏差 ddof=1
     df_stats_std.columns = [f'{d}_std' for d in df_stats_std.columns]
 
     df_stats = pd.concat([df_stats_mean, df_stats_std], axis=1)
@@ -446,7 +446,7 @@ def show_joint(x, y, savefilepath=None, show_mode=False):
     g.plot_marginals(sns.histplot, kde=True, bins=50, color='orangered')
 
     if savefilepath is not None:
-        plt.savefig(f"{savefilepath}.png", bbox_inches="tight", dpi=600)
+        #plt.savefig(f"{savefilepath}.png", bbox_inches="tight", dpi=600)
         plt.savefig(f"{savefilepath}.pdf", bbox_inches="tight", dpi=600)
     if show_mode:
         plt.show()
@@ -478,20 +478,27 @@ def compare_dataframe(df, df_gt, save_dir_root):
 
         out = {
             'col': col,
-            'mse': np.mean(col_metrics_chs['mse']),
-            'mae': np.mean(col_metrics_chs['mae']),
-            'r2': np.mean(col_metrics_chs['r2'])
+            'mse_mean': np.mean(col_metrics_chs['mse']),
+            'mse_std': np.std(col_metrics_chs['mse'], ddof=1),  # 標本標準偏差
+            'mae_mean': np.mean(col_metrics_chs['mae']),
+            'mae_std': np.std(col_metrics_chs['mae'], ddof=1),
+            'r2_mean': np.mean(col_metrics_chs['r2']),
+            'r2_std': np.mean(col_metrics_chs['r2'], ddof=1),
         }
         col_metrics.append(out)
 
     df = pd.DataFrame(res_list)
     df.to_csv(f"{save_dir_root}/evaluate_result_table.json", index=False)
+    print('-'*100)
+    print('raw')
+    print('-' * 100)
     print(df)
+
+    df_metrics = pd.DataFrame(col_metrics)
+    df_metrics.to_csv(f"{save_dir_root}/evaluate_result_table_mean.json", index=False)
     print('-'*100)
     print('statics')
     print('-' * 100)
-    df_metrics = pd.DataFrame(col_metrics)
-    df_metrics.to_csv(f"{save_dir_root}/evaluate_result_table_mean.json", index=False)
     print(df_metrics)
 
 def main():
