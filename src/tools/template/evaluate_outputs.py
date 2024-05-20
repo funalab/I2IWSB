@@ -232,9 +232,7 @@ def dimension_reduction(img_dict, save_root):
         print('-'*100)
         print('PCA...')
         name = 'PCA'
-        save_dir = f'{save_root}/{name}'
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
+        save_dir = check_dir(f'{save_root}/{name}')
 
         pca = PCA()
         res = pca.fit_transform(data)
