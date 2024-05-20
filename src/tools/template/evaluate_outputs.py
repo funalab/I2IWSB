@@ -136,8 +136,13 @@ def get_img_path(args, img_dir_root):  # f"{img_dir}/{p}_channel_{channel_id}.ti
     img_path_list = []
     for p in img_dir_each:
         for channel_id in channel_id_list:
-            folder_name = os.path.basename(p)
+            if model_name == 'cWGAN-GP':
+                folder_name = os.path.basename(p)
+            else:
+                folder_name = os.path.basename(os.path.dirname(p))
             img_path = f"{p}/{folder_name}_channel_{channel_id}.tif"
+            if not os.path.exists(img_path):
+                raise CustomException(f'img_path not exits: {img_path}')
             img_path_list.append(img_path)
 
     return img_path_list
