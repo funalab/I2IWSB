@@ -262,27 +262,22 @@ def dimension_reduction(img_dict, save_root):
         SEED = 109
         random.seed(SEED)
         np.random.seed(SEED)
-        save_dir = f'{save_root}/{name}'
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
+        save_dir = check_dir(f'{save_root}/{name}')
 
-        perplexitys = np.arange(5.0, 55.0, 5.0)#[float(5+i*10) for i in range(10)]
-        for perplexity in tqdm(perplexitys):
-            #print("perplexity: ", perplexity)
-            tsne = TSNE(n_components=2, random_state=SEED, perplexity=perplexity, n_iter=1000)
-            embedded = tsne.fit_transform(data)
+        tsne = TSNE(n_components=2, random_state=SEED, n_iter=1000)
+        embedded = tsne.fit_transform(data)
 
-            with open(f'{save_dir}/tsne.pkl', 'wb') as pickle_file:
-                pickle.dump(tsne, pickle_file)
+        with open(f'{save_dir}/tsne.pkl', 'wb') as pickle_file:
+            pickle.dump(tsne, pickle_file)
 
-            df = pd.DataFrame(embedded)
-            df.to_csv(f'{save_dir}/result_{name}_perplexity-{perplexity}_rand-{SEED}.csv',index=False)
+        df = pd.DataFrame(embedded)
+        df.to_csv(f'{save_dir}/result_{name}_rand-{SEED}.csv', index=False)
 
-            # visualize
-            filename = f'result_{name}_perplexity-{perplexity}_rand-{SEED}.pdf'
-            xlabel = f'{name} axis 1'
-            ylabel = f'{name} axis 2'
-            plot_dimension_reduction(res, save_dir, name, filename, xlabel, ylabel)
+        # visualize
+        filename = f'result_{name}_rand-{SEED}.pdf'
+        xlabel = f'{name} axis 1'
+        ylabel = f'{name} axis 2'
+        plot_dimension_reduction(res, save_dir, name, filename, xlabel, ylabel)
 
 
 def watershed_segmentation(binary_img, kernel_size, min_distance):
