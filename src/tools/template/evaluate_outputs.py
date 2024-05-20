@@ -483,7 +483,7 @@ def compare_dataframe(df, df_gt, save_dir_root):
             'mae_mean': np.mean(col_metrics_chs['mae']),
             'mae_std': np.std(col_metrics_chs['mae'], ddof=1),
             'r2_mean': np.mean(col_metrics_chs['r2']),
-            'r2_std': np.mean(col_metrics_chs['r2'], ddof=1),
+            'r2_std': np.std(col_metrics_chs['r2'], ddof=1),
         }
         col_metrics.append(out)
 
