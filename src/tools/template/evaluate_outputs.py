@@ -459,17 +459,23 @@ def main():
     ''' Get image paths '''
     # get img_dir_root
     img_dir_root = get_img_dir_root(args=args)
+    print(f'img_dir_root: {img_dir_root}')
 
     # get each img_path
+    print('getting image paths...')
     img_path_list = get_img_path(args=args, img_dir_root=img_dir_root)
     summarized_path_dict = summarize_by_image_id(paths=img_path_list)
+    print(f'img_path size: {len(img_path_list)}')
 
     # get ground truth img_path
+    print('getting ground truth image paths...')
     img_path_gt_list = get_img_path_gt(args=args)
     summarized_path_gt_dict = summarize_by_image_id(paths=img_path_gt_list)
+    print(f'img_path size: {len(img_path_gt_list)}')
 
     ''' Analyze images '''
     # analyze each image
+    print('analyze each images...')
     save_dir = check_dir(f'{os.path.dirname(img_dir_root)}/analyze')
     result_df = evaluate_main(summarized_path_dict=summarized_path_dict,
                               save_dir=check_dir(f'{save_dir}/predict'),
@@ -481,9 +487,11 @@ def main():
                                  process_num=16)
 
     # analyze dataframe
+    print('analyze dataframes...')
     analyze_dataframe(df=result_df, save_dir=check_dir(f'{save_dir}/predict'), file_name='analyzed_result')
     analyze_dataframe(df=result_df_gt, save_dir=check_dir(f'{save_dir}/ground_truth'), file_name='analyzed_result')
 
+    print('compare dataframes...')
     compare_dataframe(df=result_df, df_gt=result_df_gt, save_dir_root=check_dir(f'{save_dir}/compare'))
 
 
