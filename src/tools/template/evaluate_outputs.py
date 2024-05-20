@@ -340,7 +340,8 @@ def evaluate(input):
         'intensity_mean': float(np.mean(img_raw)),
     }
 
-    return img_id, img_raw, stats_dict
+    out = img_id, img_raw, stats_dict
+    return out
 
 
 def evaluate_main(args, summarized_path_dict, save_dir, file_name, gt_mode=False, process_num=16):
