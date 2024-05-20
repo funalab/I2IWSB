@@ -167,7 +167,7 @@ def summarize_by_image_id(paths):
         if not id in out.keys():
             out[id] = path
         else:
-            raise CustomException(f"Duplicated id detected: {id}")
+            raise CustomException(f"Duplicated id detected: {id}, {filename}")
     return out
 
 
