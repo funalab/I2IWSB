@@ -25,6 +25,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
+from PIL import Image
 
 
 def check_dir(path):
@@ -285,9 +286,22 @@ def watershed_segmentation(binary_img, kernel_size, min_distance):
     return labels
 
 
-def evaluate(input):
+def img_resize(image, resize):
+    channel = image.shape[2]
+    out = np.zeros((resize[0], resize[1], channel))
+    for c in range(channel):
+        image_c = Image.fromarray(image[:, :, c])
+        if image_c.size[0] > resize[0] or image_c.size[1] > resize[1]:  # 縮小
+            image_c = image_c.resize((resize[1], resize[0]))
+        elif image_c.size[0] < resize[0] or image_c.size[1] < resize[1]:  # 拡大
+            image_c = image_c.resize((resize[1], resize[0]), resample=Image.BICUBIC)
+        out[:, :, c] = np.array(image_c)
+    return out
+
+
+def evaluate(input, gt_mode=False):
     # parse input
-    img_id, path, save_dir = input
+    img_id, path, save_dir, resize = input
     pos, ch = img_id.split('-')
 
     # settings
@@ -297,6 +311,9 @@ def evaluate(input):
 
     # load image
     img_raw = io.imread(path)
+    if gt_mode:
+        img_raw = img_resize(image=img_raw, resize=resize)
+    assert img_raw.shape==resize, f'Shape not matched {img_raw.shape}:{resize}'
 
     # preprocess
     img = ndi.median_filter(img_raw, size=ksize)
@@ -326,7 +343,8 @@ def evaluate(input):
     return img_id, img_raw, stats_dict
 
 
-def evaluate_main(summarized_path_dict, save_dir, file_name, process_num=16):
+def evaluate_main(args, summarized_path_dict, save_dir, file_name, process_num=16):
+    resize = eval(args.resize)
     ch_size_dict = {}
     for k in summarized_path_dict.keys():
         pos, ch = k.split('-')
@@ -340,7 +358,7 @@ def evaluate_main(summarized_path_dict, save_dir, file_name, process_num=16):
     out_df = []
     img_dict = {}
     ch_count = {}
-    inputs = [[k, v, save_dir] for k, v in summarized_path_dict.items()]
+    inputs = [[k, v, save_dir, resize] for k, v in summarized_path_dict.items()]
     with Pool(process_num) as p:  # 並列+tqdm
         with tqdm(total=len(inputs)) as pbar:
             for res in p.imap_unordered(evaluate, inputs):
@@ -473,12 +491,14 @@ def main():
     # analyze each image
     print('analyze each images...')
     save_dir = check_dir(f'{os.path.dirname(img_dir_root)}/analyze')
-    result_df = evaluate_main(summarized_path_dict=summarized_path_dict,
+    result_df = evaluate_main(args=args,
+                              summarized_path_dict=summarized_path_dict,
                               save_dir=check_dir(f'{save_dir}/predict'),
                               file_name='analyzed_result',
                               process_num=16)
     print('analyze ground truth each images...')
-    result_df_gt = evaluate_main(summarized_path_dict=summarized_path_gt_dict,
+    result_df_gt = evaluate_main(args=args,
+                                 summarized_path_dict=summarized_path_gt_dict,
                                  save_dir=check_dir(f'{save_dir}/ground_truth'),
                                  file_name='analyzed_result',
                                  process_num=16)
