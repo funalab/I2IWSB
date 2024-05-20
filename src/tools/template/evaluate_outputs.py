@@ -1,5 +1,6 @@
 import gc
 import os
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
 import sys
 sys.path.append(os.getcwd())
 import json
