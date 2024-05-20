@@ -377,7 +377,8 @@ def evaluate_main(summarized_path_dict, save_dir, file_name, process_num=16):
 
                 pbar.update(1)
 
-    df = pd.DataFrame.from_dict(val_dict)
+    df = pd.DataFrame(val_dict, index=[i for i in range(len(out_df))])
+    df.head()
 
     # save
     save_dict_to_json(savefilepath=f'{save_dir}/{file_name}.json',
@@ -412,6 +413,9 @@ def evaluate_compare(x, y, savefilepath=None):
     mae = mean_absolute_error(y_pred=y_pred, y_true=y)
     r2 = r2_score(y_pred=y_pred, y_true=y)
     res = {'mse': float(mse), 'mae': float(mae), 'r2': float(r2)}
+
+    print('[Results]')
+    print(res)
 
     if savefilepath is not None:
         save_dict_to_json(savefilepath=f"{savefilepath}.json", data_dict=res)
