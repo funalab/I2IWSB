@@ -8,7 +8,7 @@ import pickle
 import numpy as np
 import pandas as pd
 from src.lib.utils.cmd_args import config_paraser
-from src.lib.utils.utils import set_seed, CustomException, check_dir, save_dict_to_json
+from src.lib.utils.utils import set_seed, CustomException, save_dict_to_json
 from tqdm import tqdm
 from skimage import io
 from skimage.filters import threshold_otsu
@@ -24,6 +24,15 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
+
+
+def check_dir(path):
+    if not os.path.exists(path):
+        try:
+            os.makedirs(path)
+        except FileExistsError:
+            pass
+    return path
 
 
 def get_img_dir_root(args):
