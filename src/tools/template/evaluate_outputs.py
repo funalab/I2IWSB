@@ -377,7 +377,7 @@ def evaluate_main(summarized_path_dict, save_dir, file_name, process_num=16):
 
                 pbar.update(1)
 
-    df = pd.DataFrame.from_dict(out_df)
+    df = pd.DataFrame(out_df)
     df.head()
 
     # save
