@@ -419,21 +419,18 @@ def analyze_dataframe(df, save_dir, file_name):
     df_stats.to_csv(f'{save_dir}/{file_name}_stats.csv', index=False)
 
 
-def evaluate_compare(x, y, savefilepath=None):
+def evaluate_compare(x, y, ch, col, savefilepath=None):
     lr = LinearRegression()
     lr.fit(np.array(x).reshape(-1, 1), np.array(y).reshape(-1, 1))
     y_pred = lr.predict(np.array(x).reshape(-1,1))
     mse = mean_squared_error(y_pred=y_pred, y_true=y)
     mae = mean_absolute_error(y_pred=y_pred, y_true=y)
     r2 = r2_score(y_pred=y_pred, y_true=y)
-    res = {'mse': float(mse), 'mae': float(mae), 'r2': float(r2)}
-
-    print('[Results]')
-    print(res)
+    res = {'ch': ch, 'col': col, 'mse': float(mse), 'mae': float(mae), 'r2': float(r2)}
 
     if savefilepath is not None:
         save_dict_to_json(savefilepath=f"{savefilepath}.json", data_dict=res)
-
+    return res
 
 def show_joint(x, y, savefilepath=None, show_mode=False):
     df = pd.DataFrame(np.squeeze(np.array([x, y]).T), columns=['Ground truth', 'Predict'])
@@ -459,17 +456,23 @@ def show_joint(x, y, savefilepath=None, show_mode=False):
 
 
 def compare_dataframe(df, df_gt, save_dir_root):
-
+    res_list = []
     columns = df.drop(['pos', 'ch'], axis=1).columns.values.tolist()
     for ch in df['ch'].unique().tolist():
         for col in columns:
-            print(f'{col}, {ch}')
+            #print(f'{ch}, {col}')
             x = df[(df['ch'] == ch)][col].tolist()
             y = df_gt[(df_gt['ch'] == ch)][col].tolist()
 
             save_dir = check_dir(f"{save_dir_root}/{ch}-{col}")
-            evaluate_compare(x, y, savefilepath=f"{save_dir}/evaluate_result")
+            res = evaluate_compare(x, y, ch, col, savefilepath=f"{save_dir}/evaluate_result")
             show_joint(x, y, savefilepath=f"{save_dir}/visualize_joint", show_mode=False)
+
+            res_list.append(res)
+
+    df = pd.DataFrame(res_list)
+    df.to_csv(f"{save_dir_root}/evaluate_result_table.json", index=False)
+    print(df)
 
 def main():
 
