@@ -266,12 +266,11 @@ def dimension_reduction(img_dict, save_root):
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
 
-        feat_list = np.load(f"{save_root}/data.npy", allow_pickle=True)
         perplexitys = np.arange(5.0, 55.0, 5.0)#[float(5+i*10) for i in range(10)]
         for perplexity in tqdm(perplexitys):
             #print("perplexity: ", perplexity)
             tsne = TSNE(n_components=2, random_state=SEED, perplexity=perplexity, n_iter=1000)
-            embedded = tsne.fit_transform(feat_list)
+            embedded = tsne.fit_transform(data)
 
             with open(f'{save_dir}/tsne.pkl', 'wb') as pickle_file:
                 pickle.dump(tsne, pickle_file)
