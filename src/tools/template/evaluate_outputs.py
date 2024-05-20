@@ -364,6 +364,7 @@ def evaluate_main(summarized_path_dict, save_dir, file_name, process_num=16):
                 pbar.update(1)
 
     df = pd.DataFrame(out_df)
+    df = df.sort_values(['pos', 'ch'])
     print(df.head())
 
     # save
