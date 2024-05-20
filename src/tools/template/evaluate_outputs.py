@@ -287,15 +287,24 @@ def watershed_segmentation(binary_img, kernel_size, min_distance):
 
 
 def img_resize(image, resize):
-    channel = image.shape[2]
-    out = np.zeros((resize[0], resize[1], channel))
-    for c in range(channel):
-        image_c = Image.fromarray(image[:, :, c])
+    if len(image.shape) > 2:
+        channel = image.shape[2]
+        out = np.zeros((resize[0], resize[1], channel))
+        for c in range(channel):
+            image_c = Image.fromarray(image[:, :, c])
+            if image_c.size[0] > resize[0] or image_c.size[1] > resize[1]:  # 縮小
+                image_c = image_c.resize((resize[1], resize[0]))
+            elif image_c.size[0] < resize[0] or image_c.size[1] < resize[1]:  # 拡大
+                image_c = image_c.resize((resize[1], resize[0]), resample=Image.BICUBIC)
+            out[:, :, c] = np.array(image_c)
+    else:
+        out = np.zeros((resize[0], resize[1]))
+        image_c = Image.fromarray(image)
         if image_c.size[0] > resize[0] or image_c.size[1] > resize[1]:  # 縮小
             image_c = image_c.resize((resize[1], resize[0]))
         elif image_c.size[0] < resize[0] or image_c.size[1] < resize[1]:  # 拡大
             image_c = image_c.resize((resize[1], resize[0]), resample=Image.BICUBIC)
-        out[:, :, c] = np.array(image_c)
+        out[:, :] = np.array(image_c)
     return out
 
 
@@ -340,8 +349,7 @@ def evaluate(input):
         'intensity_mean': float(np.mean(img_raw)),
     }
 
-    out = img_id, img_raw, stats_dict
-    return out
+    return img_id, img_raw, stats_dict
 
 
 def evaluate_main(args, summarized_path_dict, save_dir, file_name, gt_mode=False, process_num=16):
