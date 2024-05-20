@@ -17,7 +17,7 @@ from PIL import Image
 from torch.autograd import Variable
 from matplotlib import pyplot as plt
 from src.lib.datasets.augmentations import image_sliding_crop, concatinate_slides, numpy2tensor, tensor2numpy
-from src.lib.utils.utils import check_dir, convert_channels_to_rgbs, save_image_function
+from src.lib.utils.utils import check_dir, convert_channels_to_rgbs, save_image_function, save_dict_to_json
 from src.lib.losses.losses import GenLoss
 from skimage import io
 import imageio
@@ -59,6 +59,8 @@ class cWGANGPTester(object):
         self.data_range = kwargs['data_range']
         self.normalization = kwargs['normalization']
 
+        self.time_dict = {'mean': 0.0, 'time_list': []}
+
 
     def _test_func(self, data, model_G, model_D, epoch, phase, save_dir_img, cnt):
         input_real, output_real = data
@@ -80,7 +82,13 @@ class cWGANGPTester(object):
                     cropped_input_real = cropped_input_real.to(torch.device(self.device))
                     cropped_input_real = torch.unsqueeze(cropped_input_real, dim=0)  # batch
                     # inference
+                    epoch_start = time.time()
+
                     cropped_fake_imgs = model_G(cropped_input_real)
+
+                    epoch_end = time.time() - epoch_start
+                    self.time_dict['time_list'].append(epoch_end)
+
                     cropped_fake_imgs = torch.squeeze(cropped_fake_imgs)
 
                     fake_img_box.append({'pos': pos, 'data': cropped_fake_imgs})
@@ -88,7 +96,12 @@ class cWGANGPTester(object):
                 fake_imgs = concatinate_slides(images=fake_img_box, source=real_imgs)
                 fake_imgs = torch.unsqueeze(fake_imgs, dim=0)  # batch
             else:
+                epoch_start = time.time()
+
                 fake_imgs = model_G(input_real)
+
+                epoch_end = time.time() - epoch_start
+                self.time_dict['time_list'].append(epoch_end)
 
             fake_imgs = fake_imgs.to(torch.device(self.device))
 
@@ -215,6 +228,9 @@ class cWGANGPTester(object):
             with open(os.path.join(self.save_dir, "result.txt"), "w") as f:
                 f.write(print_text)
             self._save_log(loss_G_list, loss_D_list, evaluates_dict)
+
+            self.time_dict['mean'] = np.mean(self.time_dict['time_list'])
+            save_dict_to_json(savefilepath=f'{self.save_dir}/time.json', data_dict=self.time_dict)
 
         return loss_G_list, loss_D_list, evaluates_dict
 
@@ -376,6 +392,7 @@ class guidedI2ITester(object):
         self.eval_metrics = kwargs['eval_metrics'] if 'eval_metrics' in kwargs else None
         self.lossfun = kwargs['lossfun'] if 'lossfun' in kwargs else None
 
+        self.time_dict = {'mean': 0.0, 'time_list': []}
 
     def _parse_data(self, data):
         image_source, image_target, weak_label = data
@@ -420,6 +437,8 @@ class guidedI2ITester(object):
             loss_box.append(cropped_loss)
 
             if self._check_flag(phase=phase):
+                epoch_start = time.time()
+
                 cropped_fake_imgs, cropped_visuals = model.restoration(
                     cropped_input_real,
                     weak_label,
@@ -427,6 +446,10 @@ class guidedI2ITester(object):
                     y_0=cropped_real_imgs, mask=None,
                     sample_num=self.sample_num
                 )
+
+                epoch_end = time.time() - epoch_start
+                self.time_dict['time_list'].append(epoch_end)
+
                 cropped_fake_imgs = torch.squeeze(cropped_fake_imgs)
                 cropped_fake_imgs = cropped_fake_imgs.to(torch.device(self.device)).clone().detach()
 
@@ -477,10 +500,15 @@ class guidedI2ITester(object):
                 loss = model(real_imgs, weak_label, input_real, mask=None)
 
                 if self._check_flag(phase=phase):
+                    epoch_start = time.time()
+
                     fake_imgs, visuals = model.restoration(input_real, weak_label,
                                                            classifier_scale=1, y_t=None,
                                                            y_0=real_imgs, mask=None,
                                                            sample_num=self.sample_num)
+
+                    epoch_end = time.time() - epoch_start
+                    self.time_dict['time_list'].append(epoch_end)
 
                     fake_imgs = fake_imgs.to(torch.device(self.device)).clone().detach()
 
@@ -567,6 +595,9 @@ class guidedI2ITester(object):
             with open(os.path.join(self.save_dir, "result.txt"), "w") as f:
                 f.write(print_text)
             self._save_log(loss_list, evaluates_dict)
+
+            self.time_dict['mean'] = np.mean(self.time_dict['time_list'])
+            save_dict_to_json(savefilepath=f'{self.save_dir}/time.json', data_dict=self.time_dict)
 
         if self._check_flag(phase=phase):
             return loss_list, evaluates_dict
@@ -774,6 +805,7 @@ def make_beta_schedule_for_I2SB(n_timestep=1000, linear_start=1e-4, linear_end=2
     )
     return betas.numpy()
 
+
 class I2SBTester(object):
 
     def __init__(self, **kwargs):
@@ -818,6 +850,7 @@ class I2SBTester(object):
         self.output_dim_label = kwargs['output_dim_label'] if 'output_dim_label' in kwargs else None
         self.distributed = kwargs['distributed'] if 'distributed' in kwargs else False
 
+        self.time_dict = {'mean': 0.0, 'time_list': []}
 
     def sample_batch(self, data):
         # clean_img is "target" domain and corrupt_img is "source" domain
@@ -879,7 +912,14 @@ class I2SBTester(object):
             # inference
             cropped_xt = self.diffusion.q_sample(step, cropped_x0, cropped_x1, ot_ode=self.ot_ode)
             cropped_label = self.compute_label(step, cropped_x0, cropped_xt)
+
+            epoch_start = time.time()
+
             cropped_pred = model(cropped_xt, step, cond=cropped_cond)
+
+            epoch_end = time.time() - epoch_start
+            self.time_dict['time_list'].append(epoch_end)
+
             assert cropped_xt.shape == cropped_label.shape == cropped_pred.shape
 
             if cropped_masks is not None:
@@ -964,7 +1004,14 @@ class I2SBTester(object):
                 step = torch.randint(0, self.interval, (x0.shape[0],))
                 xt = self.diffusion.q_sample(step, x0, x1, ot_ode=self.ot_ode)
                 label = self.compute_label(step, x0, xt)
+
+                epoch_start = time.time()
+
                 pred = model(xt, step, cond=cond)
+
+                epoch_end = time.time() - epoch_start
+                self.time_dict['time_list'].append(epoch_end)
+
                 assert xt.shape == label.shape == pred.shape
                 if mask is not None:
                     pred = mask * pred
@@ -1079,6 +1126,9 @@ class I2SBTester(object):
             with open(os.path.join(self.save_dir, "result.txt"), "w") as f:
                 f.write(print_text)
             self._save_log(loss_list, evaluates_dict)
+
+            self.time_dict['mean'] = np.mean(self.time_dict['time_list'])
+            save_dict_to_json(savefilepath=f'{self.save_dir}/time.json', data_dict=self.time_dict)
 
         if self._check_flag(phase=phase):
             return loss_list, evaluates_dict
@@ -1412,11 +1462,14 @@ class PaletteTester(object):
         self.input_dim_label = kwargs['input_dim_label'] if 'input_dim_label' in kwargs else None
         self.output_dim_label = kwargs['output_dim_label'] if 'output_dim_label' in kwargs else None
 
+        self.time_dict = {'mean': 0.0, 'time_list': []}
+
     def _parse_data(self, data):
         image_source, image_target = data
         image_source = image_source.to(torch.device(self.device))
         image_target = image_target.to(torch.device(self.device))
         return image_source, image_target, self.batch_size
+
     def _check_flag(self, phase):
         if (phase == 'validation' and self.eval_metrics is not None) or (phase == 'test'):
             return True
@@ -1453,7 +1506,13 @@ class PaletteTester(object):
             loss_box.append(cropped_loss)
 
             if self._check_flag(phase=phase):
+                epoch_start = time.time()
+
                 cropped_fake_imgs, cropped_visuals = model.restoration(cropped_input_real, sample_num=self.sample_num)
+
+                epoch_end = time.time() - epoch_start
+                self.time_dict['time_list'].append(epoch_end)
+
                 cropped_fake_imgs = torch.squeeze(cropped_fake_imgs)
                 cropped_fake_imgs = cropped_fake_imgs.to(torch.device(self.device)).clone().detach()
 
@@ -1503,7 +1562,12 @@ class PaletteTester(object):
                 loss = model(real_imgs, input_real, mask=None)
 
                 if self._check_flag(phase=phase):
+                    epoch_start = time.time()
+
                     fake_imgs, visuals = model.restoration(input_real, sample_num=self.sample_num)
+
+                    epoch_end = time.time() - epoch_start
+                    self.time_dict['time_list'].append(epoch_end)
 
                     fake_imgs = fake_imgs.to(torch.device(self.device)).clone().detach()
 
@@ -1602,6 +1666,9 @@ class PaletteTester(object):
             with open(os.path.join(self.save_dir, "result.txt"), "w") as f:
                 f.write(print_text)
             self._save_log(loss_list, evaluates_dict)
+
+            self.time_dict['mean'] = np.mean(self.time_dict['time_list'])
+            save_dict_to_json(savefilepath=f'{self.save_dir}/time.json', data_dict=self.time_dict)
 
         if self._check_flag(phase=phase):
             return loss_list, evaluates_dict
@@ -1867,6 +1934,8 @@ class cWSBGPTester(object):
         self.output_dim_label = kwargs['output_dim_label'] if 'output_dim_label' in kwargs else None
         self.distributed = kwargs['distributed'] if 'distributed' in kwargs else False
 
+        self.time_dict = {'mean': 0.0, 'time_list': []}
+
     def sample_batch(self, data):
         # clean_img is "target" domain and corrupt_img is "source" domain
         img_source, img_target = data
@@ -1927,7 +1996,14 @@ class cWSBGPTester(object):
             # inference
             cropped_xt = self.diffusion.q_sample(step, cropped_x0, cropped_x1, ot_ode=self.ot_ode)
             cropped_label = self.compute_label(step, cropped_x0, cropped_xt)
+
+            epoch_start = time.time()
+
             cropped_pred = model(cropped_xt, step, cond=cropped_cond)
+
+            epoch_end = time.time() - epoch_start
+            self.time_dict['time_list'].append(epoch_end)
+
             assert cropped_xt.shape == cropped_label.shape == cropped_pred.shape
 
             if cropped_masks is not None:
@@ -2016,7 +2092,14 @@ class cWSBGPTester(object):
                 step = torch.randint(0, self.interval, (x0.shape[0],))
                 xt = self.diffusion.q_sample(step, x0, x1, ot_ode=self.ot_ode)
                 label = self.compute_label(step, x0, xt)
+
+                epoch_start = time.time()
+
                 pred = model_G(xt, step, cond=cond)
+
+                epoch_end = time.time() - epoch_start
+                self.time_dict['time_list'].append(epoch_end)
+
                 assert xt.shape == label.shape == pred.shape
                 if mask is not None:
                     pred = mask * pred
@@ -2170,6 +2253,9 @@ class cWSBGPTester(object):
             with open(os.path.join(self.save_dir, "result.txt"), "w") as f:
                 f.write(print_text)
             self._save_log(loss_mse_list, loss_G_list, loss_D_list, evaluates_dict)
+
+            self.time_dict['mean'] = np.mean(self.time_dict['time_list'])
+            save_dict_to_json(savefilepath=f'{self.save_dir}/time.json', data_dict=self.time_dict)
 
         return loss_mse_list, loss_G_list, loss_D_list, evaluates_dict
 

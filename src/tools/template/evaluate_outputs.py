@@ -1,15 +1,34 @@
+import gc
 import os
 import sys
 sys.path.append(os.getcwd())
 import json
+import random
+import pickle
 import numpy as np
 import pandas as pd
 from src.lib.utils.cmd_args import config_paraser
 from src.lib.utils.utils import set_seed, CustomException
 from tqdm import tqdm
 from skimage import io
+from skimage.filters import threshold_otsu
+from scipy import ndimage as ndi
+from skimage.segmentation import watershed
+from skimage.feature import peak_local_max
+from skimage.measure import regionprops_table, label
 from glob import glob
 from multiprocessing import Pool
+import seaborn as sns
+from matplotlib import pyplot as plt
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+
+def check_dir(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+    return path
 
 
 def save_dict_to_json(savefilepath, data_dict):
@@ -152,32 +171,205 @@ def summarize_by_image_id(paths):
     return out
 
 
+def plot_dimension_reduction(res, save_dir, name, filename, xlabel, ylabel, pca=None):
+    plt.rcParams["font.family"] = "Arial"
+    plt.rcParams["font.size"] = 20
+    linewidth = 2
+
+    # add legend
+    fig = plt.figure(figsize=(10,10))
+    pos_info = np.array(res)
+    plt.scatter(pos_info[:, 0], pos_info[:, 1], color='#378CE7', alpha=0.5)
+
+    plt.xlabel(xlabel, fontsize=28)
+    plt.ylabel(ylabel, fontsize=28)
+    plt.grid(linestyle='--', color="lightgray", linewidth=linewidth / 4, alpha=0.5)
+    plt.tick_params(labelsize=26)
+
+    ax = plt.gca()
+    ax.spines["right"].set_linewidth(linewidth)
+    ax.spines["top"].set_linewidth(linewidth)
+    ax.spines["left"].set_linewidth(linewidth)
+    ax.spines["bottom"].set_linewidth(linewidth)
+    ax.set_axisbelow(True)
+
+    plt.savefig(os.path.join(save_dir, f'{filename}.pdf'), bbox_inches="tight", dpi=600)
+    plt.savefig(os.path.join(save_dir, f'{filename}.png'), bbox_inches="tight", dpi=600)
+    plt.close()
+
+    if name == 'PCA' and pca is not None:
+        fig = plt.figure(figsize=(8,8))
+        plt.plot([0] + list( np.cumsum(pca.explained_variance_ratio_)), marker="o",markersize=3,
+                linestyle='dashed',linewidth=linewidth*0.5, color='k')
+        plt.xlabel("Number of principal components")
+        plt.ylabel("Cumulative contribution rate")
+        plt.grid(linestyle='--', color="lightgray", linewidth=linewidth / 4, alpha=0.5)
+
+        ax = plt.gca()
+        ax.spines["right"].set_linewidth(linewidth)
+        ax.spines["top"].set_linewidth(linewidth)
+        ax.spines["left"].set_linewidth(linewidth)
+        ax.spines["bottom"].set_linewidth(linewidth)
+        ax.set_axisbelow(True)
+
+        plt.savefig(os.path.join(save_dir, f'result_PCA_explained_variance_ratio.pdf'), bbox_inches="tight", dpi=600)
+        plt.close()
+
+
+def dimension_reduction(img_dict, save_root):
+
+    for ch in img_dict.keys():
+        print("=" * 100)
+        print(f'[ch] {ch}')
+        print("=" * 100)
+        data = img_dict[ch]
+        # PCA
+        print('-'*100)
+        print('PCA...')
+        name = 'PCA'
+        save_dir = f'{save_root}/{name}'
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+
+        pca = PCA()
+        res = pca.fit_transform(data)
+
+        # save data
+        with open(f'{save_dir}/pca.pkl', 'wb') as pickle_file:
+            pickle.dump(pca, pickle_file)
+        df = pd.DataFrame(res)
+        df.to_csv(f'{save_dir}/result_{name}.csv',index=False)
+
+        df_ratio = pd.DataFrame(pca.explained_variance_ratio_, index=["PC{}".format(x + 1) for x in range(len(df.columns))])
+        df_ratio.to_csv(f'{save_dir}/result_{name}explained_variance_ratio.csv')
+
+        # visualize
+        filename = f'result_{name}'
+        xlabel = '{} axis 1 ({:.1f}%)'.format(name, df_ratio.iloc[0, 0]*100)
+        ylabel = '{} axis 2 ({:.1f}%)'.format(name, df_ratio.iloc[1, 0]*100)
+        plot_dimension_reduction(res, save_dir, name, filename, xlabel, ylabel, pca=pca)
+
+        #################################
+        # t-SNE
+        print('-'*100)
+        print('t-SNE...')
+        name = 't-SNE'
+        SEED = 109
+        random.seed(SEED)
+        np.random.seed(SEED)
+        save_dir = f'{save_root}/{name}'
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+
+        feat_list = np.load(f"{save_root}/data.npy", allow_pickle=True)
+        perplexitys = np.arange(5.0, 55.0, 5.0)#[float(5+i*10) for i in range(10)]
+        for perplexity in tqdm(perplexitys):
+            #print("perplexity: ", perplexity)
+            tsne = TSNE(n_components=2, random_state=SEED, perplexity=perplexity, n_iter=1000)
+            embedded = tsne.fit_transform(feat_list)
+
+            with open(f'{save_dir}/tsne.pkl', 'wb') as pickle_file:
+                pickle.dump(tsne, pickle_file)
+
+            df = pd.DataFrame(embedded)
+            df.to_csv(f'{save_dir}/result_{name}_perplexity-{perplexity}_rand-{SEED}.csv',index=False)
+
+            # visualize
+            filename = f'result_{name}_perplexity-{perplexity}_rand-{SEED}.pdf'
+            xlabel = f'{name} axis 1'
+            ylabel = f'{name} axis 2'
+            plot_dimension_reduction(res, save_dir, name, filename, xlabel, ylabel)
+
+
+def watershed_segmentation(binary_img, kernel_size, min_distance):
+    distance = ndi.distance_transform_edt(binary_img)
+    coords = peak_local_max(distance,
+                            footprint=np.ones((kernel_size, kernel_size)),
+                            labels=binary_img,
+                            min_distance=min_distance)#ball(radius=kernel_size)
+    mask = np.zeros(distance.shape, dtype=bool)
+    mask[tuple(coords.T)] = True
+    markers, _ = ndi.label(mask)
+    labels = watershed(-distance, markers, mask=binary_img)
+    return labels
+
+
 def evaluate(input):
-    img_id, path = input
-    # load img
-    img = io.imread(path)
+    # parse input
+    img_id, path, save_dir = input
+    pos, ch = img_id.split('-')
 
-    val_list = []
+    # settings
+    ksize = 5
+    sigma = 1.0
+    truncate = ((ksize-1)/2-0.5)/sigma
 
-    return img_id, [float(v) for v in val_list]
+    # load image
+    img_raw = io.imread(path)
+
+    # preprocess
+    img = ndi.median_filter(img_raw, size=ksize)
+    img = ndi.gaussian_filter(img, sigma=sigma, truncate=truncate)
+
+    # binarize
+    thresh = threshold_otsu(img)
+    img_binary = img > thresh
+
+    # segmentation
+    img_label = watershed_segmentation(binary_img=img_binary, kernel_size=11, min_distance=11)
+
+    # calculate stats
+    props = regionprops_table(img_label, properties=['label', 'area'])
+    df = pd.DataFrame(props)
+
+    save_dir = check_dir(f'{save_dir}/{pos}')
+    df.to_csv(f'{save_dir}/analyzed_label_{ch}.csv', index=False)
+
+    # stats
+    stats_dict = {
+        'count': float(df['area'].size),
+        'ratio': float(df['area'].sum()/img.size),
+        'intensity_mean': float(np.mean(img_raw)),
+    }
+
+    return img_id, img_raw, stats_dict
 
 
 def evaluate_main(summarized_path_dict, save_dir, file_name, process_num=16):
+    ch_size_dict = {}
+    for k in summarized_path_dict.keys():
+        pos, ch = k.split('-')
+        if not ch in ch_size_dict.keys():
+            ch_size_dict[ch] = 1
+        else:
+            ch_size_dict[ch] += 1
+
     # run
     out = {}
     out_df = []
-    inputs = [[k, v] for k, v in summarized_path_dict.items()]
+    img_dict = {}
+    ch_count = {}
+    inputs = [[k, v, save_dir] for k, v in summarized_path_dict.items()]
     with Pool(process_num) as p:  # 並列+tqdm
         with tqdm(total=len(inputs)) as pbar:
             for res in p.imap_unordered(evaluate, inputs):
-                img_id, val_list = res
+                img_id, img_raw, stats_dict = res
                 pos, ch = img_id.split('-')
 
-                out[img_id] = val_list
                 val_dict = {'pos': pos, 'ch': ch}
-                val_dict_list = {f'val_{str(i).zfill(2)}': v for i, v in enumerate(val_list)}
-                val_dict = dict(val_dict, **val_dict_list)
+                val_dict = dict(val_dict, **stats_dict)
+
+                out[img_id] = stats_dict
                 out_df.append(val_dict)
+                if not ch in img_dict.keys():
+                    data = np.zeros((ch_size_dict[ch], img_raw.size))
+                    ch_count[ch] = 0
+                    data[ch_count[ch], :] = img_raw.flatten()
+                    img_dict[ch] = data
+                else:
+                    ch_count[ch] += 1
+                    img_dict[ch][ch_count[ch], :] = img_raw.flatten()
+
                 pbar.update(1)
 
     df = pd.DataFrame.from_dict(val_dict)
@@ -187,8 +379,73 @@ def evaluate_main(summarized_path_dict, save_dir, file_name, process_num=16):
                       data_dict=out)
     df.to_csv(f'{save_dir}/{file_name}.csv', index=False)
 
+    # dimension reduction
+    dimension_reduction(img_dict=img_dict, save_root=check_dir(f"{save_dir}/dimension_reduction"))
+
+    del img_dict
+    gc.collect()
+
     return df
 
+
+def analyze_dataframe(df, save_dir, file_name):
+    df_stats_mean = df.drop(columns='pos').groupby('ch').mean()
+    df_stats_mean.columns = [f'{d}_mean' for d in df_stats_mean.columns]
+    df_stats_std = df.drop(columns='pos').groupby('ch').std()  # 標本標準偏差 ddof=0
+    df_stats_std.columns = [f'{d}_std' for d in df_stats_std.columns]
+
+    df_stats = pd.concat([df_stats_mean, df_stats_std], axis=1)
+    #df_stats = df_stats.sort_index(axis='columns')
+    df_stats.to_csv(f'{save_dir}/{file_name}_stats.csv', index=False)
+
+
+def evaluate_compare(x, y, savefilepath=None):
+    lr = LinearRegression()
+    lr.fit(x, y)
+    y_pred = lr.predict(x)
+    mse = mean_squared_error(y_pred=y_pred, y_true=y)
+    mae = mean_absolute_error(y_pred=y_pred, y_true=y)
+    r2 = r2_score(y_pred=y_pred, y_true=y)
+    res = {'mse': float(mse), 'mae': float(mae), 'r2': float(r2)}
+
+    if savefilepath is not None:
+        save_dict_to_json(savefilepath=f"{savefilepath}.json", data_dict=res)
+
+
+def show_joint(x, y, savefilepath=None, show_mode=False):
+    df = pd.DataFrame(np.squeeze(np.array([x, y]).T), columns=['Ground truth', 'Predict'])
+
+    plt.rcParams["font.family"] = "Arial"
+    plt.rcParams["font.size"] = 20
+    figsize = [6, 6]
+
+    fig = plt.figure(figsize=figsize)
+
+    g = sns.JointGrid(data=df, x="Ground truth", y="Predict")
+    g.plot_joint(sns.scatterplot, color='dodgerblue')
+    g.plot_marginals(sns.histplot, kde=True, bins=50, color='orangered')
+
+    if savefilepath is not None:
+        plt.savefig(f"{savefilepath}.png", bbox_inches="tight", dpi=600)
+        plt.savefig(f"{savefilepath}.pdf", bbox_inches="tight", dpi=600)
+    if show_mode:
+        plt.show()
+    else:
+        plt.close()
+    del fig
+
+
+def compare_dataframe(df, df_gt, save_dir_root):
+
+    columns = df.drop(['pos', 'ch'], axis=1).columns.values.tolist()
+    for ch in df['ch'].unique().tolist():
+        for col in columns:
+            x = df[(df['ch'] == ch)][col].tolist()
+            y = df_gt[(df_gt['ch'] == ch)][col].tolist()
+
+            save_dir = check_dir(f"{save_dir_root}/{ch}-{col}")
+            evaluate_compare(x, y, savefilepath=f"{save_dir}/evaluate_result")
+            show_joint(x, y, savefilepath=f"{save_dir}/visualize_joint", show_mode=False)
 
 def main():
 
@@ -203,7 +460,6 @@ def main():
     # get img_dir_root
     img_dir_root = get_img_dir_root(args=args)
 
-
     # get each img_path
     img_path_list = get_img_path(args=args, img_dir_root=img_dir_root)
     summarized_path_dict = summarize_by_image_id(paths=img_path_list)
@@ -214,16 +470,21 @@ def main():
 
     ''' Analyze images '''
     # analyze each image
+    save_dir = check_dir(f'{os.path.dirname(img_dir_root)}/analyze')
     result_df = evaluate_main(summarized_path_dict=summarized_path_dict,
-                              save_dir=os.path.dirname(img_dir_root),
+                              save_dir=check_dir(f'{save_dir}/predict'),
                               file_name='analyzed_result',
                               process_num=16)
     result_df_gt = evaluate_main(summarized_path_dict=summarized_path_gt_dict,
-                                 save_dir=os.path.dirname(img_dir_root),
-                                 file_name='analyzed_result_gt',
+                                 save_dir=check_dir(f'{save_dir}/ground_truth'),
+                                 file_name='analyzed_result',
                                  process_num=16)
 
-    # analyze
+    # analyze dataframe
+    analyze_dataframe(df=result_df, save_dir=check_dir(f'{save_dir}/predict'), file_name='analyzed_result')
+    analyze_dataframe(df=result_df_gt, save_dir=check_dir(f'{save_dir}/ground_truth'), file_name='analyzed_result')
+
+    compare_dataframe(df=result_df, df_gt=result_df_gt, save_dir_root=check_dir(f'{save_dir}/compare'))
 
 
 if __name__ == '__main__':

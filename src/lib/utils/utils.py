@@ -18,6 +18,11 @@ def check_dir(path):
         os.makedirs(path)
     return path
 
+def save_dict_to_json(savefilepath, data_dict):
+
+    with open(savefilepath, "w") as f:
+        json.dump(data_dict, f)
+
 def create_train_dir(args):
     current_datetime = datetime.now(pytz.timezone('Asia/Tokyo')).strftime('%Y%m%d-%H%M%S')
     if hasattr(args, 'reuse') and eval(args.reuse):
