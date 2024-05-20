@@ -490,14 +490,14 @@ def compare_dataframe(df, df_gt, save_dir_root):
         col_metrics.append(out)
 
     df = pd.DataFrame(res_list)
-    df.to_csv(f"{save_dir_root}/evaluate_result_table.json", index=False)
+    df.to_csv(f"{save_dir_root}/evaluate_result_table.csv", index=False)
     print('-'*100)
     print('raw')
     print('-' * 100)
     print(df)
 
     df_metrics = pd.DataFrame(col_metrics)
-    df_metrics.to_csv(f"{save_dir_root}/evaluate_result_table_mean.json", index=False)
+    df_metrics.to_csv(f"{save_dir_root}/evaluate_result_table_mean.csv", index=False)
     print('-'*100)
     print('statics')
     print('-' * 100)
