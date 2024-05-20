@@ -378,7 +378,7 @@ def evaluate_main(summarized_path_dict, save_dir, file_name, process_num=16):
                 pbar.update(1)
 
     df = pd.DataFrame(out_df)
-    df.head()
+    print(df.head())
 
     # save
     save_dict_to_json(savefilepath=f'{save_dir}/{file_name}.json',
