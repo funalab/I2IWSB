@@ -422,7 +422,7 @@ def analyze_dataframe(df, save_dir, file_name):
 def evaluate_compare(x, y, savefilepath=None):
     lr = LinearRegression()
     lr.fit(np.array(x).reshape(-1, 1), np.array(y).reshape(-1, 1))
-    y_pred = lr.predict(x)
+    y_pred = lr.predict(np.array(x).reshape(-1,1))
     mse = mean_squared_error(y_pred=y_pred, y_true=y)
     mae = mean_absolute_error(y_pred=y_pred, y_true=y)
     r2 = r2_score(y_pred=y_pred, y_true=y)
