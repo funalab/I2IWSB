@@ -223,15 +223,10 @@ def plot_dimension_reduction(res, save_dir, name, filename, xlabel, ylabel, pca=
 
 
 def dimension_reduction(img_dict, save_root):
-
-    for ch in img_dict.keys():
-        print("=" * 100)
-        print(f'[ch] {ch}')
-        print("=" * 100)
+    print('dimension reduction...')
+    for ch in tqdm(img_dict.keys()):
         data = img_dict[ch]
         # PCA
-        print('-'*100)
-        print('PCA...')
         name = 'PCA'
         save_dir = check_dir(f'{save_root}/{name}')
 
@@ -255,8 +250,6 @@ def dimension_reduction(img_dict, save_root):
 
         #################################
         # t-SNE
-        print('-'*100)
-        print('t-SNE...')
         name = 't-SNE'
         SEED = 109
         random.seed(SEED)
