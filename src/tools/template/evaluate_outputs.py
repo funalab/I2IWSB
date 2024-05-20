@@ -299,9 +299,9 @@ def img_resize(image, resize):
     return out
 
 
-def evaluate(input, gt_mode=False):
+def evaluate(input):
     # parse input
-    img_id, path, save_dir, resize = input
+    img_id, path, save_dir, resize, gt_mode = input
     pos, ch = img_id.split('-')
 
     # settings
@@ -343,7 +343,7 @@ def evaluate(input, gt_mode=False):
     return img_id, img_raw, stats_dict
 
 
-def evaluate_main(args, summarized_path_dict, save_dir, file_name, process_num=16):
+def evaluate_main(args, summarized_path_dict, save_dir, file_name, gt_mode=False, process_num=16):
     resize = eval(args.resize)
     ch_size_dict = {}
     for k in summarized_path_dict.keys():
@@ -358,7 +358,7 @@ def evaluate_main(args, summarized_path_dict, save_dir, file_name, process_num=1
     out_df = []
     img_dict = {}
     ch_count = {}
-    inputs = [[k, v, save_dir, resize] for k, v in summarized_path_dict.items()]
+    inputs = [[k, v, save_dir, resize, gt_mode] for k, v in summarized_path_dict.items()]
     with Pool(process_num) as p:  # 並列+tqdm
         with tqdm(total=len(inputs)) as pbar:
             for res in p.imap_unordered(evaluate, inputs):
@@ -495,12 +495,14 @@ def main():
                               summarized_path_dict=summarized_path_dict,
                               save_dir=check_dir(f'{save_dir}/predict'),
                               file_name='analyzed_result',
+                              gt_mode=False,
                               process_num=16)
     print('analyze ground truth each images...')
     result_df_gt = evaluate_main(args=args,
                                  summarized_path_dict=summarized_path_gt_dict,
                                  save_dir=check_dir(f'{save_dir}/ground_truth'),
                                  file_name='analyzed_result',
+                                 gt_mode=True,
                                  process_num=16)
 
     # analyze dataframe
