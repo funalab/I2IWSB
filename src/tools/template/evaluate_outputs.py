@@ -426,11 +426,11 @@ def evaluate_compare(x, y, ch, col, savefilepath=None):
     mse = mean_squared_error(y_pred=y_pred, y_true=y)
     mae = mean_absolute_error(y_pred=y_pred, y_true=y)
     r2 = r2_score(y_pred=y_pred, y_true=y)
-    res = {'ch': ch, 'col': col, 'mse': float(mse), 'mae': float(mae), 'r2': float(r2)}
+    res = {'ch': ch, 'index': col, 'mse': float(mse), 'mae': float(mae), 'r2': float(r2)}
 
     if savefilepath is not None:
         save_dict_to_json(savefilepath=f"{savefilepath}.json", data_dict=res)
-    return res
+    return res, mse, mae, r2
 
 def show_joint(x, y, savefilepath=None, show_mode=False):
     df = pd.DataFrame(np.squeeze(np.array([x, y]).T), columns=['Ground truth', 'Predict'])
@@ -458,21 +458,41 @@ def show_joint(x, y, savefilepath=None, show_mode=False):
 def compare_dataframe(df, df_gt, save_dir_root):
     res_list = []
     columns = df.drop(['pos', 'ch'], axis=1).columns.values.tolist()
-    for ch in df['ch'].unique().tolist():
-        for col in columns:
+
+    col_metrics = []
+    for col in columns:
+        col_metrics_chs = {'mse': [], 'mae': [], 'r2': []}
+        for ch in df['ch'].unique().tolist():
             #print(f'{ch}, {col}')
             x = df[(df['ch'] == ch)][col].tolist()
             y = df_gt[(df_gt['ch'] == ch)][col].tolist()
 
             save_dir = check_dir(f"{save_dir_root}/{ch}-{col}")
-            res = evaluate_compare(x, y, ch, col, savefilepath=f"{save_dir}/evaluate_result")
+            res, mse, mae, r2 = evaluate_compare(x, y, ch, col, savefilepath=f"{save_dir}/evaluate_result")
             show_joint(x, y, savefilepath=f"{save_dir}/visualize_joint", show_mode=False)
 
             res_list.append(res)
+            col_metrics_chs['mse'].append(mse)
+            col_metrics_chs['mae'].append(mae)
+            col_metrics_chs['r2'].append(r2)
+
+        out = {
+            'col': col,
+            'mse': np.mean(col_metrics_chs['mse']),
+            'mae': np.mean(col_metrics_chs['mae']),
+            'r2': np.mean(col_metrics_chs['r2'])
+        }
+        col_metrics.append(out)
 
     df = pd.DataFrame(res_list)
     df.to_csv(f"{save_dir_root}/evaluate_result_table.json", index=False)
     print(df)
+    print('-'*100)
+    print('statics')
+    print('-' * 100)
+    df_metrics = pd.DataFrame(col_metrics)
+    df_metrics.to_csv(f"{save_dir_root}/evaluate_result_table_mean.json", index=False)
+    print(df_metrics)
 
 def main():
 
