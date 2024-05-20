@@ -463,6 +463,7 @@ def compare_dataframe(df, df_gt, save_dir_root):
     columns = df.drop(['pos', 'ch'], axis=1).columns.values.tolist()
     for ch in df['ch'].unique().tolist():
         for col in columns:
+            print(f'{col}, {ch}')
             x = df[(df['ch'] == ch)][col].tolist()
             y = df_gt[(df_gt['ch'] == ch)][col].tolist()
 
