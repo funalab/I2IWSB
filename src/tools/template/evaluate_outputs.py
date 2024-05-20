@@ -138,9 +138,9 @@ def get_img_path(args, img_dir_root):  # f"{img_dir}/{p}_channel_{channel_id}.ti
         for channel_id in channel_id_list:
             if model_name == 'cWGAN-GP':
                 folder_name = os.path.basename(p)
-                img_path = f"{p}/{folder_name}_channel_{channel_id}.tiff"
+                img_path = f"{p}/{folder_name}_channel_{channel_id}.tif"
             else:
-                img_path = f"{p}_channel_{channel_id}.tiff"
+                img_path = f"{p}_channel_{channel_id}.tif"
             img_path_list.append(img_path)
 
     return img_path_list
