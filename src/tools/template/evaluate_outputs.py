@@ -4,6 +4,7 @@ os.environ['OPENBLAS_NUM_THREADS'] = '1'
 import sys
 sys.path.append(os.getcwd())
 import json
+import copy
 import random
 import pickle
 import numpy as np
@@ -11,7 +12,7 @@ import pandas as pd
 from src.lib.utils.cmd_args import config_paraser
 from src.lib.utils.utils import set_seed, CustomException, save_dict_to_json
 from tqdm import tqdm
-from skimage import io
+from skimage import io, measure
 from skimage.filters import threshold_otsu
 from scipy import ndimage as ndi
 from skimage.segmentation import watershed
@@ -355,7 +356,7 @@ def evaluate(input):
         'intensity_mean': float(np.mean(img_raw)),
     }
 
-    return img_id, img_raw, stats_dict
+    return img_id, img_raw, img_label, stats_dict
 
 
 def evaluate_main(args, summarized_path_dict, save_dir, file_name, gt_mode=False, process_num=16):
@@ -373,11 +374,12 @@ def evaluate_main(args, summarized_path_dict, save_dir, file_name, gt_mode=False
     out_df = []
     img_dict = {}
     ch_count = {}
+    label_dict = {}
     inputs = [[k, v, save_dir, resize, gt_mode] for k, v in summarized_path_dict.items()]
     with Pool(process_num) as p:  # 並列+tqdm
         with tqdm(total=len(inputs)) as pbar:
             for res in p.imap_unordered(evaluate, inputs):
-                img_id, img_raw, stats_dict = res
+                img_id, img_raw, img_label, stats_dict = res
                 pos, ch = img_id.split('-')
 
                 val_dict = {'pos': pos, 'ch': ch}
@@ -385,14 +387,17 @@ def evaluate_main(args, summarized_path_dict, save_dir, file_name, gt_mode=False
 
                 out[img_id] = stats_dict
                 out_df.append(val_dict)
+
                 if not ch in img_dict.keys():
                     data = np.zeros((ch_size_dict[ch], img_raw.size))
                     ch_count[ch] = 0
                     data[ch_count[ch], :] = img_raw.flatten()
                     img_dict[ch] = data
+                    label_dict[ch] = [{'pos': pos, 'label': img_label}]
                 else:
                     ch_count[ch] += 1
                     img_dict[ch][ch_count[ch], :] = img_raw.flatten()
+                    label_dict[ch].append({'pos': pos, 'label': img_label})
 
                 pbar.update(1)
 
@@ -411,7 +416,7 @@ def evaluate_main(args, summarized_path_dict, save_dir, file_name, gt_mode=False
     del img_dict
     gc.collect()
 
-    return df
+    return df, label_dict
 
 
 def analyze_dataframe(df, save_dir, file_name):
@@ -507,6 +512,138 @@ def compare_dataframe(df, df_gt, save_dir_root):
     print('-' * 100)
     print(df_metrics)
 
+
+def calculate_iou(pred, gt):
+    pred = np.where(pred > 0, 1, 0).astype(np.uint8)
+    gt = np.where(gt > 0, 1, 0).astype(np.uint8)
+
+    countListPos = copy.deepcopy(pred + gt)
+    countListNeg = copy.deepcopy(pred - gt)
+    TP = len(np.where(countListPos.reshape(countListPos.size)==2)[0])
+    FP = len(np.where(countListNeg.reshape(countListNeg.size)==1)[0])
+    FN = len(np.where(countListNeg.reshape(countListNeg.size)==-1)[0])
+    try:
+        iou = TP / float(TP + FP + FN)
+        thr = TP / float(TP + FN)
+    except:
+        iou = 0
+        thr = 0
+    return iou, thr
+
+
+def calculate_seg(pred, gt):
+    sum_iou = 0
+    label_list_y_ans = np.unique(gt)[1:]
+    for i in label_list_y_ans:
+        y_ans_mask = np.array((gt == i) * 1).astype(np.int8)
+        rp = measure.regionprops(y_ans_mask)[0]
+        bbox = rp.bbox
+        y_roi = pred[bbox[0]:bbox[2], bbox[1]:bbox[3]]
+        label_list = np.unique(y_roi)[1:]
+        best_iou, best_thr = 0, 0
+        for j in label_list:
+            y_mask = np.array((pred == j) * 1).astype(np.int8)
+            iou, thr = calculate_iou(y_mask, y_ans_mask)
+            if best_iou <= iou:
+                best_iou = iou
+                best_thr = np.max([thr, best_thr])
+        if best_thr > 0.5:
+            sum_iou += best_iou
+        else:
+            sum_iou += 0.0
+    seg = sum_iou / len(label_list_y_ans)
+    return seg
+
+
+def calculate_mucov(pred, gt):
+    sum_iou = 0
+    label_list_y = np.unique(pred)[1:]
+    for i in label_list_y:
+        y_mask = np.array((pred == i) * 1).astype(np.int8)
+        rp = measure.regionprops(y_mask)[0]
+        bbox = rp.bbox
+        y_ans_roi = gt[bbox[0]:bbox[2], bbox[1]:bbox[3]]
+        label_list = np.unique(y_ans_roi)[1:]
+        best_iou, best_thr = 0, 0
+        for j in label_list:
+            y_ans_mask = np.array((gt == j) * 1).astype(np.int8)
+            iou, thr = calculate_iou(y_mask, y_ans_mask)
+            if best_iou <= iou:
+                best_iou = iou
+                best_thr = np.max([thr, best_thr])
+        if best_thr > 0.5:
+            sum_iou += best_iou
+        else:
+            sum_iou += 0.0
+    mucov = sum_iou / len(label_list_y)
+    return mucov
+
+
+def evaluate_segmentation(pred, gt):
+    # iou to evaluate semantic segmentation accuracy
+    iou, _ = calculate_iou(pred, gt)
+
+    # SEG to evaluate the absence of false-negative instances of segmentation
+    seg = calculate_seg(pred, gt)
+
+    # Mean Unweighted Coverage (MUCov) to evaluate the absence of positive-negative instances of segmentation
+    mucov = calculate_mucov(pred, gt)
+    return iou, seg, mucov
+
+
+def compare_labels(label_dict_predict, label_dict_gt, save_dir_root):
+    # label_dict = {'ch1': [{'pos':'pos1', 'label': label1},{'pos':'pos2', 'label': label2},...], ...}
+
+    ch_names = list(label_dict_gt.keys())
+    res_list = []
+    ch_metrics = []
+    for ch in ch_names:
+        dicts_predict = label_dict_predict[ch]
+        dicts_gt = label_dict_gt[ch]
+
+        dicts_predict = sorted(dicts_predict, key=lambda x: x['pos'])
+        dicts_gt = sorted(dicts_gt, key=lambda x: x['pos'])
+
+        col_metrics_chs = {'iou': [], 'seg': [], 'mucov': []}
+        for p, g in zip(dicts_predict, dicts_gt):
+            if p['pos'] == g['pos']:
+                pos = p['pos']
+                label_p = p['label']
+                label_g = g['label']
+            else:
+                raise CustomException('ID was mismatched')
+
+            # evaluate segmentation
+            iou, seg, mucov = evaluate_segmentation(pred=label_p, gt=label_g)
+
+            res_list.append({'ch': ch, 'pos': pos, 'iou': iou, 'seg': seg, 'mucov': mucov})
+
+            col_metrics_chs['iou'].append(iou)
+            col_metrics_chs['seg'].append(seg)
+            col_metrics_chs['mucov'].append(mucov)
+
+        out = {
+            'ch': ch,
+            'iou_mean': np.mean(col_metrics_chs['iou']),
+            'iou_std': np.std(col_metrics_chs['iou'], ddof=1),  # 標本標準偏差
+            'seg_mean': np.mean(col_metrics_chs['seg']),
+            'seg_std': np.std(col_metrics_chs['seg'], ddof=1),
+            'mucov_mean': np.mean(col_metrics_chs['mucov']),
+            'mucov_std': np.std(col_metrics_chs['mucov'], ddof=1),
+        }
+        ch_metrics.append(out)
+
+    df = pd.DataFrame(res_list)
+    df.to_csv(f"{save_dir_root}/evaluate_result_table.csv", index=False)
+
+    df_metrics = pd.DataFrame(ch_metrics)
+    df_metrics.to_csv(f"{save_dir_root}/evaluate_result_table_mean.csv", index=False)
+    print('-'*100)
+    print('statics')
+    print('-' * 100)
+    print(df_metrics)
+
+
 def main():
 
     ''' Settings '''
@@ -538,27 +675,34 @@ def main():
     print('analyze each images...')
     save_dir = check_dir(f'{os.path.dirname(img_dir_root)}/analyze')
     print(f'save_dir: {save_dir}')
-    result_df = evaluate_main(args=args,
-                              summarized_path_dict=summarized_path_dict,
-                              save_dir=check_dir(f'{save_dir}/predict'),
-                              file_name='analyzed_result',
-                              gt_mode=False,
-                              process_num=16)
+    result_df, label_dict_predict = evaluate_main(args=args,
+                                                  summarized_path_dict=summarized_path_dict,
+                                                  save_dir=check_dir(f'{save_dir}/predict'),
+                                                  file_name='analyzed_result',
+                                                  gt_mode=False,
+                                                  process_num=16)
     print('analyze ground truth each images...')
-    result_df_gt = evaluate_main(args=args,
-                                 summarized_path_dict=summarized_path_gt_dict,
-                                 save_dir=check_dir(f'{save_dir}/ground_truth'),
-                                 file_name='analyzed_result',
-                                 gt_mode=True,
-                                 process_num=16)
+    result_df_gt, label_dict_gt = evaluate_main(args=args,
+                                                summarized_path_dict=summarized_path_gt_dict,
+                                                save_dir=check_dir(f'{save_dir}/ground_truth'),
+                                                file_name='analyzed_result',
+                                                gt_mode=True,
+                                                process_num=16)
 
     # analyze dataframe
     print('analyze dataframes...')
     analyze_dataframe(df=result_df, save_dir=check_dir(f'{save_dir}/predict'), file_name='analyzed_result')
     analyze_dataframe(df=result_df_gt, save_dir=check_dir(f'{save_dir}/ground_truth'), file_name='analyzed_result')
 
-    print('compare dataframes...')
+    # compare semantics
+    print('compare semantics...')
     compare_dataframe(df=result_df, df_gt=result_df_gt, save_dir_root=check_dir(f'{save_dir}/compare'))
+
+    # compare object shape
+    print('compare labels...')
+    compare_labels(label_dict_predict=label_dict_predict,
+                   label_dict_gt=label_dict_gt,
+                   save_dir_root=check_dir(f'{save_dir}/compare_labels'))
 
 
 if __name__ == '__main__':
