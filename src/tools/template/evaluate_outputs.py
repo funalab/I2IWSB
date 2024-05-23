@@ -534,48 +534,57 @@ def calculate_iou(pred, gt):
 def calculate_seg(pred, gt):
     sum_iou = 0
     label_list_y_ans = np.unique(gt)[1:]
-    for i in label_list_y_ans:
-        y_ans_mask = np.array((gt == i) * 1).astype(np.int8)
-        rp = measure.regionprops(y_ans_mask)[0]
-        bbox = rp.bbox
-        y_roi = pred[bbox[0]:bbox[2], bbox[1]:bbox[3]]
-        label_list = np.unique(y_roi)[1:]
-        best_iou, best_thr = 0, 0
-        for j in label_list:
-            y_mask = np.array((pred == j) * 1).astype(np.int8)
-            iou, thr = calculate_iou(y_mask, y_ans_mask)
-            if best_iou <= iou:
-                best_iou = iou
-                best_thr = np.max([thr, best_thr])
-        if best_thr > 0.5:
-            sum_iou += best_iou
-        else:
-            sum_iou += 0.0
-    seg = sum_iou / len(label_list_y_ans)
+    if len(label_list_y_ans) > 0:
+        for i in label_list_y_ans:
+            y_ans_mask = np.array((gt == i) * 1).astype(np.int8)
+            rp = measure.regionprops(y_ans_mask)[0]
+            bbox = rp.bbox
+            y_roi = pred[bbox[0]:bbox[2], bbox[1]:bbox[3]]
+            label_list = np.unique(y_roi)[1:]
+            best_iou, best_thr = 0, 0
+            for j in label_list:
+                y_mask = np.array((pred == j) * 1).astype(np.int8)
+                iou, thr = calculate_iou(y_mask, y_ans_mask)
+                if best_iou <= iou:
+                    best_iou = iou
+                    best_thr = np.max([thr, best_thr])
+            if best_thr > 0.5:
+                sum_iou += best_iou
+            else:
+                sum_iou += 0.0
+        seg = sum_iou / len(label_list_y_ans)
+    else:
+        seg = 0.0
     return seg
 
 
 def calculate_mucov(pred, gt):
     sum_iou = 0
     label_list_y = np.unique(pred)[1:]
-    for i in label_list_y:
-        y_mask = np.array((pred == i) * 1).astype(np.int8)
-        rp = measure.regionprops(y_mask)[0]
-        bbox = rp.bbox
-        y_ans_roi = gt[bbox[0]:bbox[2], bbox[1]:bbox[3]]
-        label_list = np.unique(y_ans_roi)[1:]
-        best_iou, best_thr = 0, 0
-        for j in label_list:
-            y_ans_mask = np.array((gt == j) * 1).astype(np.int8)
-            iou, thr = calculate_iou(y_mask, y_ans_mask)
-            if best_iou <= iou:
-                best_iou = iou
-                best_thr = np.max([thr, best_thr])
-        if best_thr > 0.5:
-            sum_iou += best_iou
+    if len(label_list_y) > 0:
+        for i in label_list_y:
+            y_mask = np.array((pred == i) * 1).astype(np.int8)
+            rp = measure.regionprops(y_mask)[0]
+            bbox = rp.bbox
+            y_ans_roi = gt[bbox[0]:bbox[2], bbox[1]:bbox[3]]
+            label_list = np.unique(y_ans_roi)[1:]
+            best_iou, best_thr = 0, 0
+            for j in label_list:
+                y_ans_mask = np.array((gt == j) * 1).astype(np.int8)
+                iou, thr = calculate_iou(y_mask, y_ans_mask)
+                if best_iou <= iou:
+                    best_iou = iou
+                    best_thr = np.max([thr, best_thr])
+            if best_thr > 0.5:
+                sum_iou += best_iou
+            else:
+                sum_iou += 0.0
+        mucov = sum_iou / len(label_list_y)
+    else:
+        if len(np.unique(gt)[1:]) == 0:
+            mucov = 1.0
         else:
-            sum_iou += 0.0
-    mucov = sum_iou / len(label_list_y)
+            mucov = 0.0
     return mucov
 
 
