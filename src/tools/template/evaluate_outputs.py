@@ -653,14 +653,14 @@ def compare_labels(label_dict_predict, label_dict_gt, save_dir_root):
     print('-' * 100)
     print(df_metrics)
 
-    df_metrics_mean = df_metrics.drop('ch').mean()
+    df_metrics_mean = df_metrics.drop('ch', axis='columns').mean()
     drop_columns = [c for c in df_metrics_mean.columns if 'std' in c]
-    df_metrics_mean = df_metrics_mean.drop(drop_columns)
+    df_metrics_mean = df_metrics_mean.drop(drop_columns, axis='columns')
     df_metrics_mean.columns = [f'{c}_mean' for c in df_metrics_mean.columns]
 
-    df_metrics_std = df_metrics.drop('ch').std(ddof=1)  # 不偏標準偏差
+    df_metrics_std = df_metrics.drop('ch', axis='columns').std(ddof=1)  # 不偏標準偏差
     drop_columns = [c for c in df_metrics_std.columns if 'std' in c]
-    df_metrics_std = df_metrics_std.drop(drop_columns)
+    df_metrics_std = df_metrics_std.drop(drop_columns, axis='columns')
     df_metrics_std.columns = [f'{c}_std' for c in df_metrics_std.columns]
 
     df_metrics_concat = pd.concat([df_metrics_mean, df_metrics_std], axis=1).sort_index(axis=1)
