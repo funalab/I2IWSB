@@ -656,12 +656,12 @@ def compare_labels(label_dict_predict, label_dict_gt, save_dir_root):
     df_metrics_mean = df_metrics.drop('ch', axis='columns').mean()
     drop_columns = [c for c in df_metrics_mean.index if 'std' in c]
     df_metrics_mean = df_metrics_mean.drop(drop_columns, axis='index')
-    df_metrics_mean.columns = [f'{c}_mean' for c in df_metrics_mean.index]
+    df_metrics_mean.index = [f'{c}_mean' for c in df_metrics_mean.index]
 
     df_metrics_std = df_metrics.drop('ch', axis='columns').std(ddof=1)  # 不偏標準偏差
     drop_columns = [c for c in df_metrics_std.index if 'std' in c]
     df_metrics_std = df_metrics_std.drop(drop_columns, axis='index')
-    df_metrics_std.columns = [f'{c}_std' for c in df_metrics_std.index]
+    df_metrics_std.index = [f'{c}_std' for c in df_metrics_std.index]
 
     df_metrics_concat = pd.concat([df_metrics_mean, df_metrics_std], axis=0).sort_index(axis=0)
     df_metrics_concat = df_metrics_concat.to_frame().T
