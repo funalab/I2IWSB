@@ -471,7 +471,7 @@ def compare_dataframe(df, df_gt, save_dir_root):
     columns = df.drop(['pos', 'ch'], axis=1).columns.values.tolist()
 
     col_metrics = []
-    for col in columns:
+    for col in tqdm(columns):
         col_metrics_chs = {'mse': [], 'mae': [], 'r2': []}
         for ch in df['ch'].unique().tolist():
             #print(f'{ch}, {col}')
@@ -606,7 +606,7 @@ def compare_labels(label_dict_predict, label_dict_gt, save_dir_root):
     ch_names = list(label_dict_gt.keys())
     res_list = []
     ch_metrics = []
-    for ch in ch_names:
+    for ch in tqdm(ch_names):
         dicts_predict = label_dict_predict[ch]
         dicts_gt = label_dict_gt[ch]
 
