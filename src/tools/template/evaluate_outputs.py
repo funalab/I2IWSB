@@ -38,83 +38,87 @@ def check_dir(path):
 
 
 def get_img_dir_root(args):
-    if args.model_dir is not None:
-        if args.eval_metric != 'None':
-            eval_metric = str(args.eval_metric)
-            if "*" in args.model_dir:
-                if hasattr(args, "exp_name"):
-                    folder_name = str(args.exp_name)
+    if args.save_dir != 'None':
+        img_dir_root = f"{args.save_dir}/images"
+        print(f'[img dir root] {img_dir_root}')
+    else:
+        if args.model_dir is not None:
+            if args.eval_metric != 'None':
+                eval_metric = str(args.eval_metric)
+                if "*" in args.model_dir:
+                    if hasattr(args, "exp_name"):
+                        folder_name = str(args.exp_name)
+                    else:
+                        folder_name = os.path.basename(os.path.dirname(args.conf_file))
+
+                    set_dir = os.path.dirname(args.model_dir)
+                    model_dirs = glob(os.path.join(set_dir, folder_name, "*", "train", eval_metric))
+
+                    best_model_dir = None
+                    best_metrics = 0.0 if eval(args.eval_maximize) else 10.0 ** 13
+
+                    for model_dir in model_dirs:
+                        try:
+                            # open best_result.json
+                            with open(f"{model_dir}/best_{eval_metric}_result.json", "r") as f:
+                                load_result = json.load(f)
+                        except:
+                            load_result = None
+
+                        if load_result is not None:
+                            # search best result
+                            current_val = load_result[f"best {args.eval_metric}"]
+
+                            if eval(args.eval_maximize):
+                                if current_val >= best_metrics:
+                                    best_metrics = current_val
+                                    best_model_dir = model_dir
+                            else:
+                                if current_val <= best_metrics:
+                                    best_metrics = current_val
+                                    best_model_dir = model_dir
+                    if best_model_dir is None:
+                        raise ValueError('Cannot search best result. Specified trained model')
                 else:
-                    folder_name = os.path.basename(os.path.dirname(args.conf_file))
+                    best_model_dir = args.model_dir
+            else:
+                eval_metric = 'loss'
+                if "*" in args.model_dir:
+                    if hasattr(args, "exp_name"):
+                        folder_name = str(args.exp_name)
+                    else:
+                        folder_name = os.path.basename(os.path.dirname(args.conf_file))
 
-                set_dir = os.path.dirname(args.model_dir)
-                model_dirs = glob(os.path.join(set_dir, folder_name, "*", "train", eval_metric))
+                    set_dir = os.path.dirname(args.model_dir)
+                    model_dirs = glob(os.path.join(set_dir, folder_name, "*", "train", eval_metric))
 
-                best_model_dir = None
-                best_metrics = 0.0 if eval(args.eval_maximize) else 10.0 ** 13
+                    best_model_dir = None
+                    best_metrics = 10.0 ** 13
 
-                for model_dir in model_dirs:
-                    try:
-                        # open best_result.json
-                        with open(f"{model_dir}/best_{eval_metric}_result.json", "r") as f:
-                            load_result = json.load(f)
-                    except:
-                        load_result = None
+                    for model_dir in model_dirs:
+                        try:
+                            # open best_result.json
+                            with open(f"{model_dir}/best_{eval_metric}_result.json", "r") as f:
+                                load_result = json.load(f)
+                        except:
+                            load_result = None
 
-                    if load_result is not None:
-                        # search best result
-                        current_val = load_result[f"best {args.eval_metric}"]
-
-                        if eval(args.eval_maximize):
-                            if current_val >= best_metrics:
-                                best_metrics = current_val
-                                best_model_dir = model_dir
-                        else:
+                        if load_result is not None:
+                            # search best result
+                            current_val = load_result[f"best {eval_metric}"]
                             if current_val <= best_metrics:
                                 best_metrics = current_val
                                 best_model_dir = model_dir
-                if best_model_dir is None:
-                    raise ValueError('Cannot search best result. Specified trained model')
-            else:
-                best_model_dir = args.model_dir
-        else:
-            eval_metric = 'loss'
-            if "*" in args.model_dir:
-                if hasattr(args, "exp_name"):
-                    folder_name = str(args.exp_name)
+                    if best_model_dir is None:
+                        raise ValueError('Cannot search best result. Specified trained model')
                 else:
-                    folder_name = os.path.basename(os.path.dirname(args.conf_file))
+                    best_model_dir = args.model_dir
+        else:
+            raise ValueError('Specified trained model')
 
-                set_dir = os.path.dirname(args.model_dir)
-                model_dirs = glob(os.path.join(set_dir, folder_name, "*", "train", eval_metric))
-
-                best_model_dir = None
-                best_metrics = 10.0 ** 13
-
-                for model_dir in model_dirs:
-                    try:
-                        # open best_result.json
-                        with open(f"{model_dir}/best_{eval_metric}_result.json", "r") as f:
-                            load_result = json.load(f)
-                    except:
-                        load_result = None
-
-                    if load_result is not None:
-                        # search best result
-                        current_val = load_result[f"best {eval_metric}"]
-                        if current_val <= best_metrics:
-                            best_metrics = current_val
-                            best_model_dir = model_dir
-                if best_model_dir is None:
-                    raise ValueError('Cannot search best result. Specified trained model')
-            else:
-                best_model_dir = args.model_dir
-    else:
-        raise ValueError('Specified trained model')
-
-    save_dir = best_model_dir.replace("/train/", "/test/")
-    img_dir_root = f"{save_dir}/images"
-    print(f'[img dir root] {img_dir_root}')
+        save_dir = best_model_dir.replace("/train/", "/test/")
+        img_dir_root = f"{save_dir}/images"
+        print(f'[img dir root] {img_dir_root}')
 
     return img_dir_root
 
