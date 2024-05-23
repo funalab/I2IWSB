@@ -669,7 +669,7 @@ def compare_labels(label_dict_predict, label_dict_gt, save_dir_root):
     print('-'*100)
     print('all statics')
     print('-' * 100)
-    print(df_metrics)
+    print(df_metrics_concat)
 
 
 def main():
