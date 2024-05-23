@@ -422,7 +422,7 @@ def evaluate_main(args, summarized_path_dict, save_dir, file_name, gt_mode=False
 def analyze_dataframe(df, save_dir, file_name):
     df_stats_mean = df.drop(columns='pos').groupby('ch').mean()
     df_stats_mean.columns = [f'{d}_mean' for d in df_stats_mean.columns]
-    df_stats_std = df.drop(columns='pos').groupby('ch').std(ddof=1)  # 標本標準偏差 ddof=1
+    df_stats_std = df.drop(columns='pos').groupby('ch').std(ddof=1)  # 不偏標準偏差
     df_stats_std.columns = [f'{d}_std' for d in df_stats_std.columns]
 
     df_stats = pd.concat([df_stats_mean, df_stats_std], axis=1)
@@ -490,7 +490,7 @@ def compare_dataframe(df, df_gt, save_dir_root):
         out = {
             'col': col,
             'mse_mean': np.mean(col_metrics_chs['mse']),
-            'mse_std': np.std(col_metrics_chs['mse'], ddof=1),  # 標本標準偏差
+            'mse_std': np.std(col_metrics_chs['mse'], ddof=1),  # 不偏標準偏差
             'mae_mean': np.mean(col_metrics_chs['mae']),
             'mae_std': np.std(col_metrics_chs['mae'], ddof=1),
             'r2_mean': np.mean(col_metrics_chs['r2']),
@@ -634,7 +634,7 @@ def compare_labels(label_dict_predict, label_dict_gt, save_dir_root):
         out = {
             'ch': ch,
             'iou_mean': np.mean(col_metrics_chs['iou']),
-            'iou_std': np.std(col_metrics_chs['iou'], ddof=1),  # 標本標準偏差
+            'iou_std': np.std(col_metrics_chs['iou'], ddof=1),  # 不偏標準偏差
             'seg_mean': np.mean(col_metrics_chs['seg']),
             'seg_std': np.std(col_metrics_chs['seg'], ddof=1),
             'mucov_mean': np.mean(col_metrics_chs['mucov']),
@@ -645,10 +645,28 @@ def compare_labels(label_dict_predict, label_dict_gt, save_dir_root):
     df = pd.DataFrame(res_list)
     df.to_csv(f"{save_dir_root}/evaluate_result_table.csv", index=False)
 
+    ch_metrics = sorted(ch_metrics, key=lambda x: x['ch'])
     df_metrics = pd.DataFrame(ch_metrics)
-    df_metrics.to_csv(f"{save_dir_root}/evaluate_result_table_mean.csv", index=False)
+    df_metrics.to_csv(f"{save_dir_root}/evaluate_result_table_mean_per_channel.csv", index=False)
     print('-'*100)
-    print('statics')
+    print('each statics')
+    print('-' * 100)
+    print(df_metrics)
+
+    df_metrics_mean = df_metrics.drop('ch').mean()
+    drop_columns = [c for c in df_metrics_mean.columns if 'std' in c]
+    df_metrics_mean = df_metrics_mean.drop(drop_columns)
+    df_metrics_mean.columns = [f'{c}_mean' for c in df_metrics_mean.columns]
+
+    df_metrics_std = df_metrics.drop('ch').std(ddof=1)  # 不偏標準偏差
+    drop_columns = [c for c in df_metrics_std.columns if 'std' in c]
+    df_metrics_std = df_metrics_std.drop(drop_columns)
+    df_metrics_std.columns = [f'{c}_std' for c in df_metrics_std.columns]
+
+    df_metrics_concat = pd.concat([df_metrics_mean, df_metrics_std], axis=1).sort_index(axis=1)
+    df_metrics_concat.to_csv(f"{save_dir_root}/evaluate_result_table_mean_all_channel.csv", index=False)
+    print('-'*100)
+    print('all statics')
     print('-' * 100)
     print(df_metrics)
 
