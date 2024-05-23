@@ -533,6 +533,7 @@ def main():
     # analyze each image
     print('analyze each images...')
     save_dir = check_dir(f'{os.path.dirname(img_dir_root)}/analyze')
+    print(f'save_dir: {save_dir}')
     result_df = evaluate_main(args=args,
                               summarized_path_dict=summarized_path_dict,
                               save_dir=check_dir(f'{save_dir}/predict'),
