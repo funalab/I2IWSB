@@ -7,6 +7,7 @@ import json
 import copy
 import random
 import pickle
+import itertools
 import numpy as np
 import pandas as pd
 from src.lib.utils.cmd_args import config_paraser
@@ -17,7 +18,7 @@ from skimage.filters import threshold_otsu
 from scipy import ndimage as ndi
 from skimage.segmentation import watershed
 from skimage.feature import peak_local_max
-from skimage.measure import regionprops_table, label
+from skimage.measure import regionprops_table, pearson_corr_coeff, label, manders_coloc_coeff
 from glob import glob
 from multiprocessing import Pool
 import seaborn as sns
@@ -356,7 +357,13 @@ def evaluate(input):
         'intensity_mean': float(np.mean(img_raw)),
     }
 
-    return img_id, img_raw, img_label, stats_dict
+    # get power spectrum in frequency domain
+    img = np.fft.fft(img_raw)
+    img = np.fft.fftshift(img)
+    pw_r = np.abs(img) ** 2
+    pw = 10 * np.log10(pw_r + 1)
+
+    return img_id, img_raw, img_label, pw, stats_dict
 
 
 def evaluate_main(args, summarized_path_dict, save_dir, file_name, gt_mode=False, process_num=16):
@@ -375,11 +382,13 @@ def evaluate_main(args, summarized_path_dict, save_dir, file_name, gt_mode=False
     img_dict = {}
     ch_count = {}
     label_dict = {}
+    raw_dict = {}
+    pw_dict = {}
     inputs = [[k, v, save_dir, resize, gt_mode] for k, v in summarized_path_dict.items()]
     with Pool(process_num) as p:  # 並列+tqdm
         with tqdm(total=len(inputs)) as pbar:
             for res in p.imap_unordered(evaluate, inputs):
-                img_id, img_raw, img_label, stats_dict = res
+                img_id, img_raw, img_label, pw, stats_dict = res
                 pos, ch = img_id.split('-')
 
                 val_dict = {'pos': pos, 'ch': ch}
@@ -394,10 +403,14 @@ def evaluate_main(args, summarized_path_dict, save_dir, file_name, gt_mode=False
                     data[ch_count[ch], :] = img_raw.flatten()
                     img_dict[ch] = data
                     label_dict[ch] = [{'pos': pos, 'label': img_label}]
+                    raw_dict[ch] = [{'pos': pos, 'data': img_raw}]
+                    pw_dict[ch] = [{'pos': pos, 'data': pw}]
                 else:
                     ch_count[ch] += 1
                     img_dict[ch][ch_count[ch], :] = img_raw.flatten()
                     label_dict[ch].append({'pos': pos, 'label': img_label})
+                    raw_dict[ch].append({'pos': pos, 'data': img_raw})
+                    pw_dict[ch].append({'pos': pos, 'data': pw})
 
                 pbar.update(1)
 
@@ -413,10 +426,7 @@ def evaluate_main(args, summarized_path_dict, save_dir, file_name, gt_mode=False
     # dimension reduction
     dimension_reduction(img_dict=img_dict, save_root=check_dir(f"{save_dir}/dimension_reduction"))
 
-    del img_dict
-    gc.collect()
-
-    return df, label_dict
+    return df, label_dict, raw_dict, pw_dict
 
 
 def analyze_dataframe(df, save_dir, file_name):
@@ -431,17 +441,23 @@ def analyze_dataframe(df, save_dir, file_name):
 
 
 def evaluate_compare(x, y, ch, col, savefilepath=None):
-    lr = LinearRegression()
-    lr.fit(np.array(x).reshape(-1, 1), np.array(y).reshape(-1, 1))
-    y_pred = lr.predict(np.array(x).reshape(-1,1))
-    mse = mean_squared_error(y_pred=y_pred, y_true=y)
-    mae = mean_absolute_error(y_pred=y_pred, y_true=y)
-    r2 = r2_score(y_pred=y_pred, y_true=y)
-    res = {'ch': ch, 'index': col, 'mse': float(mse), 'mae': float(mae), 'r2': float(r2)}
+    # lr = LinearRegression()
+    # lr.fit(np.array(x).reshape(-1, 1), np.array(y).reshape(-1, 1))
+    # y_pred = lr.predict(np.array(x).reshape(-1,1))
+    mse = mean_squared_error(y_pred=x, y_true=y)
+    mae = mean_absolute_error(y_pred=x, y_true=y)
+    r2 = r2_score(y_pred=x, y_true=y)
+    pr = pearson_corr_coeff(x, y)[0]
+    res = {'ch': ch,
+           'index': col,
+           'mse': float(mse),
+           'mae': float(mae),
+           'pearsonr': float(pr),
+           'r2': float(r2)}
 
     if savefilepath is not None:
         save_dict_to_json(savefilepath=f"{savefilepath}.json", data_dict=res)
-    return res, mse, mae, r2
+    return res, mse, mae, pr, r2
 
 def show_joint(x, y, savefilepath=None, show_mode=False):
     df = pd.DataFrame(np.squeeze(np.array([x, y]).T), columns=['Ground truth', 'Predict'])
@@ -472,19 +488,20 @@ def compare_dataframe(df, df_gt, save_dir_root):
 
     col_metrics = []
     for col in tqdm(columns):
-        col_metrics_chs = {'mse': [], 'mae': [], 'r2': []}
+        col_metrics_chs = {'mse': [], 'mae': [], 'pearsonr': [], 'r2': []}
         for ch in df['ch'].unique().tolist():
             #print(f'{ch}, {col}')
             x = df[(df['ch'] == ch)][col].tolist()
             y = df_gt[(df_gt['ch'] == ch)][col].tolist()
 
             save_dir = check_dir(f"{save_dir_root}/{ch}-{col}")
-            res, mse, mae, r2 = evaluate_compare(x, y, ch, col, savefilepath=f"{save_dir}/evaluate_result")
+            res, mse, mae, pr, r2 = evaluate_compare(x, y, ch, col, savefilepath=f"{save_dir}/evaluate_result")
             show_joint(x, y, savefilepath=f"{save_dir}/visualize_joint", show_mode=False)
 
             res_list.append(res)
             col_metrics_chs['mse'].append(mse)
             col_metrics_chs['mae'].append(mae)
+            col_metrics_chs['pearsonr'].append(pr)
             col_metrics_chs['r2'].append(r2)
 
         out = {
@@ -493,6 +510,8 @@ def compare_dataframe(df, df_gt, save_dir_root):
             'mse_std': np.std(col_metrics_chs['mse'], ddof=1),  # 不偏標準偏差
             'mae_mean': np.mean(col_metrics_chs['mae']),
             'mae_std': np.std(col_metrics_chs['mae'], ddof=1),
+            'pearsonr_mean': np.mean(col_metrics_chs['pr']),
+            'pearsonr_std': np.std(col_metrics_chs['pr'], ddof=1),
             'r2_mean': np.mean(col_metrics_chs['r2']),
             'r2_std': np.std(col_metrics_chs['r2'], ddof=1),
         }
@@ -672,6 +691,181 @@ def compare_labels(label_dict_predict, label_dict_gt, save_dir_root):
     print(df_metrics_concat)
 
 
+def measure_signals(dict, dict_label, ch1, ch2):
+    data_list_ch1 = dict[ch1]
+    data_list_ch2 = dict[ch2]
+    label_list_ch2 = dict_label[ch1]
+
+    data_list_ch1 = sorted(data_list_ch1, key=lambda x: x['pos'])
+    data_list_ch2 = sorted(data_list_ch2, key=lambda x: x['pos'])
+    label_list_ch2 = sorted(label_list_ch2, key=lambda x: x['pos'])
+
+    out_list = []
+    for data_ch1, data_ch2, label_ch2 in zip(data_list_ch1, data_list_ch2, label_list_ch2):
+        if data_ch1['pos'] == data_ch2['pos'] == label_ch2['pos']:
+            data_ch1 = data_ch1['data']
+            data_ch2 = data_ch2['data']
+            label_ch2 = label_ch2['label']
+            seg_ch2 = np.where(label_ch2 > 0, True, False)
+            # colocalization
+            moc = manders_coloc_coeff(data_ch1, seg_ch2)
+            pr = pearson_corr_coeff(data_ch1, data_ch2)[0]
+
+            pos = data_ch1['pos']
+            out = {'ch1(target)': ch1, 'ch2(reference)': ch2, 'pos': pos, 'pr': pr, 'moc': moc}
+            out_list.append(out)
+        else:
+            raise CustomException(f'ID is mismatched')
+    return out_list
+
+
+def compare_signals(pred_dict, gt_dict, pred_dict_label, gt_dict_label, save_dir):
+
+    chs = list(pred_dict.keys())
+    chs_comb_list = list(itertools.permutations(chs, 2))
+
+    list_gt = []
+    list_pred = []
+    res_list = []
+
+    for ch1, ch2 in tqdm(chs_comb_list):
+        # gt
+        out_list_gt = measure_signals(dict=gt_dict, dict_label=gt_dict_label, ch1=ch1, ch2=ch2)
+        list_gt += out_list_gt
+
+        # pred
+        out_list_pred = measure_signals(dict=pred_dict, dict_label=pred_dict_label, ch1=ch1, ch2=ch2)
+        list_pred += out_list_pred
+
+        # compare
+        gt_df = pd.DataFrame(out_list_gt)
+        pred_df = pd.DataFrame(out_list_pred)
+
+        gt_df_drops_columns = [k for k, v in gt_df.dtypes.items() if v == object]
+        pred_df_drops_columns = [k for k, v in pred_df.dtypes.items() if v == object]
+
+        gt_df = gt_df.drop(gt_df_drops_columns, axis=1)
+        pred_df = gt_df.drop(pred_df_drops_columns, axis=1)
+
+        cols = list(gt_df.columns)
+        for col in cols:
+            x = pred_df[col].tolist()
+            y = gt_df[col].tolist()
+            save_chs = check_dir(f"{save_dir}/Target_{ch1}-Ref_{ch2}")
+            res, _, _, _, _ = evaluate_compare(x=x,
+                                               y=y,
+                                               ch=f'{ch1}-{ch2}',
+                                               col=col,
+                                               savefilepath=f"{save_chs}/evaluate_result_{col}")
+            show_joint(x, y, savefilepath=f"{save_chs}/visualize_joint_{col}", show_mode=False)
+            res_list.append(res)
+
+    # save all data
+    df = pd.DataFrame(list_gt)
+    df.to_csv(f'{save_dir}/ground_truth_all.csv', index=False)
+    df_pred = pd.DataFrame(list_pred)
+    df_pred.to_csv(f'{save_dir}/pred_all.csv', index=False)
+
+    # save compare
+    df = pd.DataFrame(res_list)
+    df.to_csv(f"{save_dir}/evaluate_result_table.csv", index=False)
+    print('-'*100)
+    print('raw')
+    print('-' * 100)
+    print(df)
+
+    df_metrics = pd.DataFrame(res_list)
+    df_metrics_drops_columns = [k for k, v in df_metrics.dtypes.items() if v == object]
+    df_metrics = df_metrics.drop(df_metrics_drops_columns, axis=1)
+
+    df_metrics_mean = df_metrics.mean()
+    df_metrics_mean.index = [f'{c}_mean' for c in df_metrics_mean.index]
+
+    df_metrics_std = df_metrics.std(ddof=1)  # 不偏標準偏差
+    df_metrics_std.index = [f'{c}_std' for c in df_metrics_std.index]
+
+    df_metrics_concat = pd.concat([df_metrics_mean, df_metrics_std], axis=0).sort_index(axis=0)
+    df_metrics_concat = df_metrics_concat.to_frame().T
+    df_metrics_concat.to_csv(f"{save_dir}/evaluate_result_table_mean.csv", index=False)
+    print('-'*100)
+    print('statics')
+    print('-' * 100)
+    print(df_metrics_concat)
+
+def compare_frequency(dict_predict, dict_gt, save_dir_root):
+    # dict = {'ch1': [{'pos':'pos1', 'data': data1},{'pos':'pos2', 'data': data2},...], ...}
+
+    ch_names = list(dict_gt.keys())
+    res_list = []
+    ch_metrics = []
+    for ch in tqdm(ch_names):
+        dicts_predict = dict_predict[ch]
+        dicts_gt = dict_gt[ch]
+
+        dicts_predict = sorted(dicts_predict, key=lambda x: x['pos'])
+        dicts_gt = sorted(dicts_gt, key=lambda x: x['pos'])
+
+        col_metrics_chs = {'mse': [], 'mae': [], 'pearsonr': [], 'r2': []}
+        for p, g in zip(dicts_predict, dicts_gt):
+            if p['pos'] == g['pos']:
+                pos = p['pos']
+                data_p = p['data']
+                data_g = g['data']
+            else:
+                raise CustomException('ID was mismatched')
+
+            # evaluate segmentation
+            res, mse, mae, pr, r2 = evaluate_compare(x=data_p, y=data_g, ch=ch, col=pos, savefilepath=None)
+
+            res_list.append(res)
+            col_metrics_chs['mse'].append(mse)
+            col_metrics_chs['mae'].append(mae)
+            col_metrics_chs['pearsonr'].append(pr)
+            col_metrics_chs['r2'].append(r2)
+
+        out = {
+            'ch': ch,
+            'mse_mean': np.mean(col_metrics_chs['mse']),
+            'mse_std': np.std(col_metrics_chs['mse'], ddof=1),  # 不偏標準偏差
+            'mae_mean': np.mean(col_metrics_chs['mae']),
+            'mae_std': np.std(col_metrics_chs['mae'], ddof=1),
+            'pearsonr_mean': np.mean(col_metrics_chs['pearsonr']),
+            'pearsonr_std': np.std(col_metrics_chs['pearsonr'], ddof=1),
+            'r2_mean': np.mean(col_metrics_chs['r2']),
+            'r2_std': np.std(col_metrics_chs['r2'], ddof=1),
+        }
+        ch_metrics.append(out)
+
+    df = pd.DataFrame(res_list)
+    df.to_csv(f"{save_dir_root}/evaluate_result_table.csv", index=False)
+
+    ch_metrics = sorted(ch_metrics, key=lambda x: x['ch'])
+    df_metrics = pd.DataFrame(ch_metrics)
+    df_metrics.to_csv(f"{save_dir_root}/evaluate_result_table_mean_per_channel.csv", index=False)
+    print('-'*100)
+    print('each statics')
+    print('-' * 100)
+    print(df_metrics)
+
+    df_metrics_mean = df_metrics.drop('ch', axis='columns').mean()
+    drop_columns = [c for c in df_metrics_mean.index if 'std' in c]
+    df_metrics_mean = df_metrics_mean.drop(drop_columns, axis='index')
+    df_metrics_mean.index = [f'{c}_mean' for c in df_metrics_mean.index]
+
+    df_metrics_std = df_metrics.drop('ch', axis='columns').std(ddof=1)  # 不偏標準偏差
+    drop_columns = [c for c in df_metrics_std.index if 'std' in c]
+    df_metrics_std = df_metrics_std.drop(drop_columns, axis='index')
+    df_metrics_std.index = [f'{c}_std' for c in df_metrics_std.index]
+
+    df_metrics_concat = pd.concat([df_metrics_mean, df_metrics_std], axis=0).sort_index(axis=0)
+    df_metrics_concat = df_metrics_concat.to_frame().T
+    df_metrics_concat.to_csv(f"{save_dir_root}/evaluate_result_table_mean_all_channel.csv", index=False)
+    print('-'*100)
+    print('all statics')
+    print('-' * 100)
+    print(df_metrics_concat)
+
+
 def main():
 
     ''' Settings '''
@@ -703,19 +897,19 @@ def main():
     print('analyze each images...')
     save_dir = check_dir(f'{os.path.dirname(img_dir_root)}/analyze')
     print(f'save_dir: {save_dir}')
-    result_df, label_dict_predict = evaluate_main(args=args,
-                                                  summarized_path_dict=summarized_path_dict,
-                                                  save_dir=check_dir(f'{save_dir}/predict'),
-                                                  file_name='analyzed_result',
-                                                  gt_mode=False,
-                                                  process_num=16)
+    result_df, label_dict_predict, raw_dict_predict, pw_dict_pred = evaluate_main(args=args,
+                                                                                  summarized_path_dict=summarized_path_dict,
+                                                                                  save_dir=check_dir(f'{save_dir}/predict'),
+                                                                                  file_name='analyzed_result',
+                                                                                  gt_mode=False,
+                                                                                  process_num=16)
     print('analyze ground truth each images...')
-    result_df_gt, label_dict_gt = evaluate_main(args=args,
-                                                summarized_path_dict=summarized_path_gt_dict,
-                                                save_dir=check_dir(f'{save_dir}/ground_truth'),
-                                                file_name='analyzed_result',
-                                                gt_mode=True,
-                                                process_num=16)
+    result_df_gt, label_dict_gt, raw_dict_gt, pw_dict_gt = evaluate_main(args=args,
+                                                                         summarized_path_dict=summarized_path_gt_dict,
+                                                                         save_dir=check_dir(f'{save_dir}/ground_truth'),
+                                                                         file_name='analyzed_result',
+                                                                         gt_mode=True,
+                                                                         process_num=16)
 
     # analyze dataframe
     print('analyze dataframes...')
@@ -731,6 +925,20 @@ def main():
     compare_labels(label_dict_predict=label_dict_predict,
                    label_dict_gt=label_dict_gt,
                    save_dir_root=check_dir(f'{save_dir}/compare_labels'))
+
+    # compare signals between channels
+    print('compare signals...')
+    compare_signals(pred_dict=raw_dict_predict,
+                    gt_dict=raw_dict_gt,
+                    pred_dict_label=label_dict_predict,
+                    gt_dict_label=label_dict_gt,
+                    save_dir=check_dir(f'{save_dir}/compare_signals'))
+
+    # compare semantics in frequency domain
+    print('compare semantics in frequency domain...')
+    compare_frequency(dict_predict=pw_dict_pred,
+                      dict_gt=pw_dict_gt,
+                      save_dir_root=check_dir(f'{save_dir}/compare_frequency'))
 
 
 if __name__ == '__main__':
