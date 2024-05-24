@@ -703,13 +703,13 @@ def measure_signals(dict, dict_label, ch1, ch2):
     out_list = []
     for data_ch1, data_ch2, label_ch2 in zip(data_list_ch1, data_list_ch2, label_list_ch2):
         if data_ch1['pos'] == data_ch2['pos'] == label_ch2['pos']:
-            data_ch1 = data_ch1['data']
-            data_ch2 = data_ch2['data']
-            label_ch2 = label_ch2['label']
-            seg_ch2 = np.where(label_ch2 > 0, True, False)
+            data_ch1_data = data_ch1['data']
+            data_ch2_data = data_ch2['data']
+            label_ch2_data = label_ch2['label']
+            seg_ch2 = np.where(label_ch2_data > 0, True, False)
             # colocalization
-            moc = manders_coloc_coeff(data_ch1, seg_ch2)
-            pr = pearson_corr_coeff(data_ch1, data_ch2)[0]
+            moc = manders_coloc_coeff(data_ch1_data, seg_ch2)
+            pr = pearson_corr_coeff(data_ch1_data, data_ch2_data)[0]
 
             pos = data_ch1['pos']
             out = {'ch1(target)': ch1, 'ch2(reference)': ch2, 'pos': pos, 'pr': pr, 'moc': moc}
