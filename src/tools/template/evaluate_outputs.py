@@ -745,7 +745,7 @@ def compare_signals(pred_dict, gt_dict, pred_dict_label, gt_dict_label, save_dir
         pred_df_drops_columns = [k for k, v in pred_df.dtypes.items() if v == object]
 
         gt_df = gt_df.drop(gt_df_drops_columns, axis=1)
-        pred_df = gt_df.drop(pred_df_drops_columns, axis=1)
+        pred_df = pred_df.drop(pred_df_drops_columns, axis=1)
 
         cols = list(gt_df.columns)
         for col in cols:
