@@ -488,7 +488,7 @@ def compare_dataframe(df, df_gt, save_dir_root):
 
     col_metrics = []
     for col in tqdm(columns):
-        col_metrics_chs = {'mse': [], 'mae': [], 'pearsonr': [], 'r2': []}
+        col_metrics_chs = {'mse': [], 'mae': [], 'pr': [], 'r2': []}
         for ch in df['ch'].unique().tolist():
             #print(f'{ch}, {col}')
             x = df[(df['ch'] == ch)][col].tolist()
