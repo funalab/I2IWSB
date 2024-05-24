@@ -501,7 +501,7 @@ def compare_dataframe(df, df_gt, save_dir_root):
             res_list.append(res)
             col_metrics_chs['mse'].append(mse)
             col_metrics_chs['mae'].append(mae)
-            col_metrics_chs['pearsonr'].append(pr)
+            col_metrics_chs['pr'].append(pr)
             col_metrics_chs['r2'].append(r2)
 
         out = {
