@@ -441,9 +441,16 @@ def analyze_dataframe(df, save_dir, file_name):
 
 
 def evaluate_compare(x, y, ch, col, savefilepath=None):
-    # lr = LinearRegression()
-    # lr.fit(np.array(x).reshape(-1, 1), np.array(y).reshape(-1, 1))
-    # y_pred = lr.predict(np.array(x).reshape(-1,1))
+    # drop nan
+    if np.isnan(x).any():
+        ind = [i for i, d in enumerate(x) if np.isnan(d)]
+        x = np.delete(x, ind, 0)
+        y = np.delete(y, ind, 0)
+    if np.isnan(y).any():
+        ind = [i for i, d in enumerate(y) if np.isnan(d)]
+        x = np.delete(x, ind, 0)
+        y = np.delete(y, ind, 0)
+
     mse = mean_squared_error(y_pred=x, y_true=y)
     mae = mean_absolute_error(y_pred=x, y_true=y)
     r2 = r2_score(y_pred=x, y_true=y)
