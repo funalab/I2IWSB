@@ -424,7 +424,7 @@ def evaluate_main(args, summarized_path_dict, save_dir, file_name, gt_mode=False
     df.to_csv(f'{save_dir}/{file_name}.csv', index=False)
 
     # dimension reduction
-    dimension_reduction(img_dict=img_dict, save_root=check_dir(f"{save_dir}/dimension_reduction"))
+    #dimension_reduction(img_dict=img_dict, save_root=check_dir(f"{save_dir}/dimension_reduction"))
 
     return df, label_dict, raw_dict, pw_dict
 
@@ -503,7 +503,7 @@ def compare_dataframe(df, df_gt, save_dir_root):
 
             save_dir = check_dir(f"{save_dir_root}/{ch}-{col}")
             res, mse, mae, pr, r2 = evaluate_compare(x, y, ch, col, savefilepath=f"{save_dir}/evaluate_result")
-            show_joint(x, y, savefilepath=f"{save_dir}/visualize_joint", show_mode=False)
+            show_joint(y, x, savefilepath=f"{save_dir}/visualize_joint", show_mode=False)
 
             res_list.append(res)
             col_metrics_chs['mse'].append(mse)
@@ -764,7 +764,7 @@ def compare_signals(pred_dict, gt_dict, pred_dict_label, gt_dict_label, save_dir
                                                ch=f'{ch1}-{ch2}',
                                                col=col,
                                                savefilepath=f"{save_chs}/evaluate_result_{col}")
-            show_joint(x, y, savefilepath=f"{save_chs}/visualize_joint_{col}", show_mode=False)
+            show_joint(y, x, savefilepath=f"{save_chs}/visualize_joint_{col}", show_mode=False)
             res_list.append(res)
 
     # save all data
