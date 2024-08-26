@@ -1,3 +1,4 @@
+import os
 import torch
 import torch.optim as optim
 from src.lib.utils.utils import CustomException
@@ -5,6 +6,7 @@ from src.lib.utils.utils import CustomException
 
 def modify_state(args, optimizer):
     if "cuda" in args.device:
+        os.environ['CUDA_VISIBLE_DEVICES'] = args.device[-1]
         device = torch.device('cuda')
     else:
         device = torch.device(str(args.device))

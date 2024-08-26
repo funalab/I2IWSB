@@ -55,6 +55,7 @@ def create_test_dir(args, best_model_dir):
     return save_dir
 
 def set_seed(args):
+    os.environ['CUDA_VISIBLE_DEVICES'] = args.device[-1]
     seed = int(args.seed)
     random.seed(seed)
     np.random.seed(seed)
@@ -76,6 +77,7 @@ def set_seed(args):
     return generator
 
 def set_seed_for_cWGAN_GP(args):
+    os.environ['CUDA_VISIBLE_DEVICES'] = args.device[-1]
     seed = int(args.seed)
     random.seed(seed)
     np.random.seed(seed)
