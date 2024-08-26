@@ -25,3 +25,9 @@ requirements_dev.txt
 /datasets_JUMP/load_data_csv/
 /datasets_JUMP/images/
 /notebooks/visualize_ground_truth/
+/notebooks/visualize_dimension_reduction/
+/notebooks/visualize_loss/
+/notebooks/visualize_predict/
+/notebooks/visualize_image_analysis/
+/notebooks/visualize_predict_robustness/
+/notebooks/visualize_fourier_analysis/

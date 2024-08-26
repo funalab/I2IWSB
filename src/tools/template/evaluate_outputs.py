@@ -278,7 +278,7 @@ def dimension_reduction(img_dict, save_root):
         filename = f'result_{name}_rand-{SEED}.pdf'
         xlabel = f'{name} axis 1'
         ylabel = f'{name} axis 2'
-        plot_dimension_reduction(res, save_dir, name, filename, xlabel, ylabel)
+        plot_dimension_reduction(embedded, save_dir, name, filename, xlabel, ylabel)
 
 
 def watershed_segmentation(binary_img, kernel_size, min_distance):
