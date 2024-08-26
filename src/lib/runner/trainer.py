@@ -66,12 +66,18 @@ class cWGANGPTrainer(object):
 
             self._best_vals = {}
             self._best_epochs = {}
-            for ind, metric in enumerate(self.eval_metrics):
-                save_dir_each_metric = os.path.join(self.save_dir, metric)
-                with open(os.path.join(save_dir_each_metric, f'best_{metric}_result.json'), 'r') as f:
+            if self.eval_metrics is not None and self.eval_maximizes is not None:
+                for ind, metric in enumerate(self.eval_metrics):
+                    save_dir_each_metric = os.path.join(self.save_dir, metric)
+                    with open(os.path.join(save_dir_each_metric, f'best_{metric}_result.json'), 'r') as f:
+                        data = json.load(f)
+                    self._best_epochs[metric] = data['best epoch']
+                    self._best_vals[metric] = data['best {}'.format(metric)]
+            else:
+                with open(os.path.join(self.save_dir, 'loss', f'best_loss_result.json'), 'r') as f:
                     data = json.load(f)
-                self._best_epochs[metric] = data['best epoch']
-                self._best_vals[metric] = data['best {}'.format(metric)]
+                self._best_epochs['loss'] = data['best epoch']
+                self._best_vals['loss'] = data['best loss']
         else:
             self.last_epoch = 0
             self._best_vals = {}
@@ -105,8 +111,9 @@ class cWGANGPTrainer(object):
             'normalization': self.normalization,
             }
 
+        validator = cWGANGPTester(**validator_args)
+
         if self.reuse:
-            # final modelでsaveしたrandom_stateは，_calculate_gradient_penalty()のために再度ここで指定する必要がある
             last_data = torch.load(f'{self.save_dir}/last_epoch_object.cpt')
 
             random.setstate(last_data["random_state"])
@@ -114,8 +121,6 @@ class cWGANGPTrainer(object):
             torch.random.set_rng_state(last_data["torch_random_state"])
             if 'torch_cuda_random_state' in last_data:
                 torch.cuda.set_rng_state(last_data['torch_cuda_random_state'])
-
-        validator = cWGANGPTester(**validator_args)
 
         for epoch in range(self.last_epoch, self.epoch_num):
             print("Epoch: {}/{}".format(epoch+1, self.epoch_num))
@@ -503,6 +508,10 @@ class cWGANGPTrainer(object):
 
         if self.device == torch.device('cuda') or self.device == torch.device('mps'):
             last_ckpt['torch_cuda_random_state'] = torch.cuda.get_rng_state()
+        if self.scheduler_G is not None:
+            last_ckpt['scheduler_G'] = self.scheduler_G.state_dict()
+        if self.scheduler_D is not None:
+            last_ckpt['scheduler_D'] = self.scheduler_D.state_dict()
         torch.save(last_ckpt, os.path.join(self.save_dir, f'last_epoch_object.cpt'))
 
         model_G.to(torch.device(self.device))
@@ -548,21 +557,41 @@ class guidedI2ITrainer(object):
         self.device = kwargs['device']
         self.seed = kwargs['seed']
 
-        self.last_epoch = 0
-        self._best_vals = {}
-        self._best_epochs = {}
-        if self.eval_metrics is not None and self.eval_maximizes is not None:
+        self.reuse = kwargs['reuse'] if 'reuse' in kwargs else False
+        if self.reuse:
+            with open(os.path.join(self.save_dir, 'last_epoch.json'), 'r') as f:
+                last_data = json.load(f)
+            self.last_epoch = last_data['last_epoch']
+
+            with open(os.path.join(self.save_dir, 'log.json'), 'r') as f:
+                self.results = json.load(f)
+
+            self._best_vals = {}
+            self._best_epochs = {}
+            if self.eval_metrics is not None and self.eval_maximizes is not None:
+                for ind, metric in enumerate(self.eval_metrics):
+                    save_dir_each_metric = os.path.join(self.save_dir, metric)
+                    with open(os.path.join(save_dir_each_metric, f'best_{metric}_result.json'), 'r') as f:
+                        data = json.load(f)
+                    self._best_epochs[metric] = data['best epoch']
+                    self._best_vals[metric] = data['best {}'.format(metric)]
+            else:
+                with open(os.path.join(self.save_dir, 'loss', f'best_loss_result.json'), 'r') as f:
+                    data = json.load(f)
+                self._best_epochs['loss'] = data['best epoch']
+                self._best_vals['loss'] = data['best loss']
+        else:
+            self.last_epoch = 0
+            self._best_vals = {}
+            self._best_epochs = {}
             for ind, metric in enumerate(self.eval_metrics):
                 self._best_epochs[metric] = 0
                 if self.eval_maximizes[ind]:
                     self._best_vals[metric] = 0.0
                 else:
                     self._best_vals[metric] = 10.0**13
-        else:
-            self._best_epochs['loss'] = 0
-            self._best_vals['loss'] = 10.0**13
 
-        self.results = {}
+            self.results = {}
 
         self.image_dtype = kwargs['image_dtype']
         self.data_range = kwargs['data_range']
@@ -580,6 +609,14 @@ class guidedI2ITrainer(object):
         self.task = kwargs['task']
 
     def train(self, model, train_iterator, validation_iterator):
+        if self.reuse:
+            last_data = torch.load(f'{self.save_dir}/last_epoch_object.cpt')
+
+            random.setstate(last_data["random_state"])
+            np.random.set_state(last_data['np_random_state'])
+            torch.random.set_rng_state(last_data["torch_random_state"])
+            if 'torch_cuda_random_state' in last_data:
+                torch.cuda.set_rng_state(last_data['torch_cuda_random_state'])
 
         # create validator
         validator_args = {
@@ -853,6 +890,8 @@ class guidedI2ITrainer(object):
 
         if self.device == torch.device('cuda') or self.device == torch.device('mps'):
             last_ckpt['torch_cuda_random_state'] = torch.cuda.get_rng_state()
+        if self.scheduler is not None:
+            last_ckpt['scheduler'] = self.scheduler.state_dict()
         torch.save(last_ckpt, os.path.join(self.save_dir, f'last_epoch_object.cpt'))
 
         model.to(torch.device(self.device))
@@ -889,20 +928,41 @@ class I2SBTrainer(object):
         self.device = kwargs['device']
         self.seed = kwargs['seed']
 
-        self._best_vals = {}
-        self._best_epochs = {}
-        if self.eval_metrics is not None and self.eval_maximizes is not None:
+        self.reuse = kwargs['reuse'] if 'reuse' in kwargs else False
+        if self.reuse:
+            with open(os.path.join(self.save_dir, 'last_epoch.json'), 'r') as f:
+                last_data = json.load(f)
+            self.last_epoch = last_data['last_epoch']
+
+            with open(os.path.join(self.save_dir, 'log.json'), 'r') as f:
+                self.results = json.load(f)
+
+            self._best_vals = {}
+            self._best_epochs = {}
+            if self.eval_metrics is not None and self.eval_maximizes is not None:
+                for ind, metric in enumerate(self.eval_metrics):
+                    save_dir_each_metric = os.path.join(self.save_dir, metric)
+                    with open(os.path.join(save_dir_each_metric, f'best_{metric}_result.json'), 'r') as f:
+                        data = json.load(f)
+                    self._best_epochs[metric] = data['best epoch']
+                    self._best_vals[metric] = data['best {}'.format(metric)]
+            else:
+                with open(os.path.join(self.save_dir, 'loss', f'best_loss_result.json'), 'r') as f:
+                    data = json.load(f)
+                self._best_epochs['loss'] = data['best epoch']
+                self._best_vals['loss'] = data['best loss']
+        else:
+            self.last_epoch = 0
+            self._best_vals = {}
+            self._best_epochs = {}
             for ind, metric in enumerate(self.eval_metrics):
                 self._best_epochs[metric] = 0
                 if self.eval_maximizes[ind]:
                     self._best_vals[metric] = 0.0
                 else:
                     self._best_vals[metric] = 10.0**13
-        else:
-            self._best_epochs['loss'] = 0
-            self._best_vals['loss'] = 10.0**13
 
-        self.results = {}
+            self.results = {}
 
         self.image_dtype = kwargs['image_dtype']
         self.data_range = kwargs['data_range']
@@ -929,6 +989,17 @@ class I2SBTrainer(object):
     def train(self, model, train_iterator, validation_iterator):
 
         self.emer = ExponentialMovingAverage(model.parameters(), decay=self.ema)
+        if self.reuse:
+            last_data = torch.load(f'{self.save_dir}/last_epoch_object.cpt')
+
+            random.setstate(last_data["random_state"])
+            np.random.set_state(last_data['np_random_state'])
+            torch.random.set_rng_state(last_data["torch_random_state"])
+            if 'torch_cuda_random_state' in last_data:
+                torch.cuda.set_rng_state(last_data['torch_cuda_random_state'])
+
+            if 'emer' in last_data:
+                self.emer.load_state_dict(last_data["emer"])
 
         # create validator
         validator_args = {
@@ -1241,10 +1312,13 @@ class I2SBTrainer(object):
             'torch_generator_random_state': train_iterator.generator.get_state(),
             'model': model.state_dict(),
             'optimizer': self.optimizer.state_dict(),
+            'emer': self.emer.state_dict(),
         }
 
         if self.device == torch.device('cuda') or self.device == torch.device('mps'):
             last_ckpt['torch_cuda_random_state'] = torch.cuda.get_rng_state()
+        if self.scheduler is not None:
+            last_ckpt['scheduler'] = self.scheduler.state_dict()
         torch.save(last_ckpt, os.path.join(self.save_dir, f'last_epoch_object.cpt'))
 
         model.to(torch.device(self.device))
@@ -1270,20 +1344,41 @@ class I2SBDistributedTrainer(object):
         self.device = kwargs['device']
         self.seed = kwargs['seed']
 
-        self._best_vals = {}
-        self._best_epochs = {}
-        if self.eval_metrics is not None and self.eval_maximizes is not None:
+        self.reuse = kwargs['reuse'] if 'reuse' in kwargs else False
+        if self.reuse:
+            with open(os.path.join(self.save_dir, 'last_epoch.json'), 'r') as f:
+                last_data = json.load(f)
+            self.last_epoch = last_data['last_epoch']
+
+            with open(os.path.join(self.save_dir, 'log.json'), 'r') as f:
+                self.results = json.load(f)
+
+            self._best_vals = {}
+            self._best_epochs = {}
+            if self.eval_metrics is not None and self.eval_maximizes is not None:
+                for ind, metric in enumerate(self.eval_metrics):
+                    save_dir_each_metric = os.path.join(self.save_dir, metric)
+                    with open(os.path.join(save_dir_each_metric, f'best_{metric}_result.json'), 'r') as f:
+                        data = json.load(f)
+                    self._best_epochs[metric] = data['best epoch']
+                    self._best_vals[metric] = data['best {}'.format(metric)]
+            else:
+                with open(os.path.join(self.save_dir, 'loss', f'best_loss_result.json'), 'r') as f:
+                    data = json.load(f)
+                self._best_epochs['loss'] = data['best epoch']
+                self._best_vals['loss'] = data['best loss']
+        else:
+            self.last_epoch = 0
+            self._best_vals = {}
+            self._best_epochs = {}
             for ind, metric in enumerate(self.eval_metrics):
                 self._best_epochs[metric] = 0
                 if self.eval_maximizes[ind]:
                     self._best_vals[metric] = 0.0
                 else:
                     self._best_vals[metric] = 10.0**13
-        else:
-            self._best_epochs['loss'] = 0
-            self._best_vals['loss'] = 10.0**13
 
-        self.results = {}
+            self.results = {}
 
         self.image_dtype = kwargs['image_dtype']
         self.data_range = kwargs['data_range']
@@ -1318,6 +1413,18 @@ class I2SBDistributedTrainer(object):
 
         train_iterator = setup_loader(train_dataset, int(args.microbatch), generator)
         validation_iterator = setup_loader(validation_dataset, int(args.microbatch), generator)
+
+        if self.reuse:
+            last_data = torch.load(f'{self.save_dir}/last_epoch_object.cpt')
+
+            random.setstate(last_data["random_state"])
+            np.random.set_state(last_data['np_random_state'])
+            torch.random.set_rng_state(last_data["torch_random_state"])
+            if 'torch_cuda_random_state' in last_data:
+                torch.cuda.set_rng_state(last_data['torch_cuda_random_state'])
+
+            if 'emer' in last_data:
+                self.emer.load_state_dict(last_data["emer"])
 
         # create validator
         validator_args = {
@@ -1623,10 +1730,13 @@ class I2SBDistributedTrainer(object):
             'torch_generator_random_state': train_iterator.generator.get_state(),
             'model': model.state_dict(),
             'optimizer': self.optimizer.state_dict(),
+            'emer': self.emer.state_dict(),
         }
 
         if self.device == torch.device('cuda') or self.device == torch.device('mps'):
             last_ckpt['torch_cuda_random_state'] = torch.cuda.get_rng_state()
+        if self.scheduler is not None:
+            last_ckpt['scheduler'] = self.scheduler.state_dict()
         torch.save(last_ckpt, os.path.join(self.save_dir, f'last_epoch_object.cpt'))
 
         model.to(torch.device(self.device))
@@ -1670,21 +1780,41 @@ class PaletteTrainer(object):
         self.device = kwargs['device']
         self.seed = kwargs['seed']
 
-        self.last_epoch = 0
-        self._best_vals = {}
-        self._best_epochs = {}
-        if self.eval_metrics is not None and self.eval_maximizes is not None:
+        self.reuse = kwargs['reuse'] if 'reuse' in kwargs else False
+        if self.reuse:
+            with open(os.path.join(self.save_dir, 'last_epoch.json'), 'r') as f:
+                last_data = json.load(f)
+            self.last_epoch = last_data['last_epoch']
+
+            with open(os.path.join(self.save_dir, 'log.json'), 'r') as f:
+                self.results = json.load(f)
+
+            self._best_vals = {}
+            self._best_epochs = {}
+            if self.eval_metrics is not None and self.eval_maximizes is not None:
+                for ind, metric in enumerate(self.eval_metrics):
+                    save_dir_each_metric = os.path.join(self.save_dir, metric)
+                    with open(os.path.join(save_dir_each_metric, f'best_{metric}_result.json'), 'r') as f:
+                        data = json.load(f)
+                    self._best_epochs[metric] = data['best epoch']
+                    self._best_vals[metric] = data['best {}'.format(metric)]
+            else:
+                with open(os.path.join(self.save_dir, 'loss', f'best_loss_result.json'), 'r') as f:
+                    data = json.load(f)
+                self._best_epochs['loss'] = data['best epoch']
+                self._best_vals['loss'] = data['best loss']
+        else:
+            self.last_epoch = 0
+            self._best_vals = {}
+            self._best_epochs = {}
             for ind, metric in enumerate(self.eval_metrics):
                 self._best_epochs[metric] = 0
                 if self.eval_maximizes[ind]:
                     self._best_vals[metric] = 0.0
                 else:
                     self._best_vals[metric] = 10.0**13
-        else:
-            self._best_epochs['loss'] = 0
-            self._best_vals['loss'] = 10.0**13
 
-        self.results = {}
+            self.results = {}
 
         self.image_dtype = kwargs['image_dtype']
         self.data_range = kwargs['data_range']
@@ -1702,6 +1832,15 @@ class PaletteTrainer(object):
         self.task = kwargs['task']
 
     def train(self, model, train_iterator, validation_iterator):
+
+        if self.reuse:
+            last_data = torch.load(f'{self.save_dir}/last_epoch_object.cpt')
+
+            random.setstate(last_data["random_state"])
+            np.random.set_state(last_data['np_random_state'])
+            torch.random.set_rng_state(last_data["torch_random_state"])
+            if 'torch_cuda_random_state' in last_data:
+                torch.cuda.set_rng_state(last_data['torch_cuda_random_state'])
 
         # create validator
         validator_args = {
@@ -1976,6 +2115,8 @@ class PaletteTrainer(object):
 
         if self.device == torch.device('cuda') or self.device == torch.device('mps'):
             last_ckpt['torch_cuda_random_state'] = torch.cuda.get_rng_state()
+        if self.scheduler is not None:
+            last_ckpt['scheduler'] = self.scheduler.state_dict()
         torch.save(last_ckpt, os.path.join(self.save_dir, f'last_epoch_object.cpt'))
 
         model.to(torch.device(self.device))
@@ -2020,12 +2161,18 @@ class cWSBGPTrainer(object):
 
             self._best_vals = {}
             self._best_epochs = {}
-            for ind, metric in enumerate(self.eval_metrics):
-                save_dir_each_metric = os.path.join(self.save_dir, metric)
-                with open(os.path.join(save_dir_each_metric, f'best_{metric}_result.json'), 'r') as f:
+            if self.eval_metrics is not None and self.eval_maximizes is not None:
+                for ind, metric in enumerate(self.eval_metrics):
+                    save_dir_each_metric = os.path.join(self.save_dir, metric)
+                    with open(os.path.join(save_dir_each_metric, f'best_{metric}_result.json'), 'r') as f:
+                        data = json.load(f)
+                    self._best_epochs[metric] = data['best epoch']
+                    self._best_vals[metric] = data['best {}'.format(metric)]
+            else:
+                with open(os.path.join(self.save_dir, 'loss', f'best_loss_result.json'), 'r') as f:
                     data = json.load(f)
-                self._best_epochs[metric] = data['best epoch']
-                self._best_vals[metric] = data['best {}'.format(metric)]
+                self._best_epochs['loss'] = data['best epoch']
+                self._best_vals['loss'] = data['best loss']
         else:
             self.last_epoch = 0
             self._best_vals = {}
@@ -2066,10 +2213,21 @@ class cWSBGPTrainer(object):
         self.val_per_epoch = kwargs['val_per_epoch'] if 'val_per_epoch' in kwargs else 1
         self.print_train_loss_per_epoch = kwargs['print_train_loss_per_epoch'] if 'print_train_loss_per_epoch' in kwargs else 1
 
-
     def train(self, model_G, model_D, train_iterator, validation_iterator):
 
         self.emer = ExponentialMovingAverage(model_G.parameters(), decay=self.ema)
+        if self.reuse:
+            # final modelでsaveしたrandom_stateは，_calculate_gradient_penalty()のために再度ここで指定する必要がある
+            last_data = torch.load(f'{self.save_dir}/last_epoch_object.cpt')
+
+            random.setstate(last_data["random_state"])
+            np.random.set_state(last_data['np_random_state'])
+            torch.random.set_rng_state(last_data["torch_random_state"])
+            if 'torch_cuda_random_state' in last_data:
+                torch.cuda.set_rng_state(last_data['torch_cuda_random_state'])
+
+            if 'emer' in last_data:
+                self.emer.load_state_dict(last_data["emer"])
 
         # create validator
         validator_args = {
@@ -2090,16 +2248,6 @@ class cWSBGPTrainer(object):
             'emer': self.emer,
             'diffusion': self.diffusion,
             }
-
-        if self.reuse:
-            # final modelでsaveしたrandom_stateは，_calculate_gradient_penalty()のために再度ここで指定する必要がある
-            last_data = torch.load(f'{self.save_dir}/last_epoch_object.cpt')
-
-            random.setstate(last_data["random_state"])
-            np.random.set_state(last_data['np_random_state'])
-            torch.random.set_rng_state(last_data["torch_random_state"])
-            if 'torch_cuda_random_state' in last_data:
-                torch.cuda.set_rng_state(last_data['torch_cuda_random_state'])
 
         validator = cWSBGPTester(**validator_args)
 
@@ -2533,10 +2681,15 @@ class cWSBGPTrainer(object):
             'model_D': model_D.state_dict(),
             'optimizer_G': self.optimizer_G.state_dict(),
             'optimizer_D': self.optimizer_D.state_dict(),
+            'emer': self.emer.state_dict(),
         }
 
         if self.device == torch.device('cuda') or self.device == torch.device('mps'):
             last_ckpt['torch_cuda_random_state'] = torch.cuda.get_rng_state()
+        if self.scheduler_G is not None:
+            last_ckpt['scheduler_G'] = self.scheduler_G.state_dict()
+        if self.scheduler_D is not None:
+            last_ckpt['scheduler_D'] = self.scheduler_D.state_dict()
         torch.save(last_ckpt, os.path.join(self.save_dir, f'last_epoch_object.cpt'))
 
         model_G.to(torch.device(self.device))

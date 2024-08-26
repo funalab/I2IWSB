@@ -10,6 +10,7 @@ from src.lib.models.guided_I2I import Palette as PaletteForGuidedI2I
 #from src.lib.models.guided_diffusion_modules import *
 from src.lib.models.diffusion_for_I2SB import I2SB
 from src.lib.models.palette import Palette
+from src.lib.utils.utils import CustomException
 '''
 wrapper function to get model
 '''
@@ -47,12 +48,16 @@ def get_train_model_GAN(args, device):
     else:
         raise NotImplementedError
 
-    if hasattr(args, 'init_model') and args.init_model is not None:
+    if hasattr(args, 'init_model') and str(args.init_model) != 'None':
         stdict_G = torch.load(f"{str(args.init_model)}/train/last_epoch_object.cpt")['model_G']
         stdict_D = torch.load(f"{str(args.init_model)}/train/last_epoch_object.cpt")['model_D']
 
         model_G.load_state_dict(stdict_G)
         model_D.load_state_dict(stdict_D)
+
+    if hasattr(args,'reuse') and eval(args.reuse):
+        if not hasattr(args, 'init_model') or str(args.init_model) == 'None':
+            raise CustomException('reuse flag is True, but init_model was not set')
 
     model_G = model_G.to(device)
     model_D = model_D.to(device)
@@ -261,11 +266,14 @@ def get_train_model_DF(args, device):
     else:
         raise NotImplementedError
 
-    if hasattr(args, 'init_model') and args.init_model is not None:
-        # stdict = torch.load(f"{str(args.init_model)}/train/last_epoch_object.cpt")['model']
-        #
-        # model.load_state_dict(stdict)
-        raise NotImplementedError
+    if hasattr(args, 'init_model') and str(args.init_model) != 'None':
+        stdict = torch.load(f"{str(args.init_model)}/train/last_epoch_object.cpt")['model']
+
+        model.load_state_dict(stdict)
+
+    if hasattr(args,'reuse') and eval(args.reuse):
+        if not hasattr(args, 'init_model') or str(args.init_model) == 'None':
+            raise CustomException('reuse flag is True, but init_model was not set')
 
     model = model.to(device)
 
@@ -424,12 +432,16 @@ def get_train_model_WSB(args, device):
     else:
         raise NotImplementedError
 
-    if hasattr(args, 'init_model') and args.init_model is not None :
+    if hasattr(args, 'init_model') and str(args.init_model) != 'None':
         stdict_G = torch.load(f"{str(args.init_model)}/train/last_epoch_object.cpt")['model_G']
         stdict_D = torch.load(f"{str(args.init_model)}/train/last_epoch_object.cpt")['model_D']
 
         model_G.load_state_dict(stdict_G)
         model_D.load_state_dict(stdict_D)
+
+    if hasattr(args,'reuse') and eval(args.reuse):
+        if not hasattr(args, 'init_model') or str(args.init_model) == 'None':
+            raise CustomException('reuse flag is True, but init_model was not set')
 
     model_G = model_G.to(device)
     model_D = model_D.to(device)

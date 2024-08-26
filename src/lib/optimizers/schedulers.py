@@ -1,4 +1,6 @@
+import torch
 import torch.optim.lr_scheduler as lr_scheduler
+from src.lib.utils.utils import CustomException
 
 
 def get_scheduler_GAN(args, optimizer_G, optimizer_D):
@@ -40,6 +42,19 @@ def get_scheduler_GAN(args, optimizer_G, optimizer_D):
         else:
             raise ValueError("Not implemented scheduler in this version. Please check schedulers.py")
 
+    if hasattr(args, 'init_model') and str(args.init_model) != 'None' \
+            and hasattr(args, 'scheduler_G') and str(args.scheduler_G) != 'None' \
+            and hasattr(args, 'scheduler_D') and str(args.scheduler_D) != 'None' :
+        stdict_G = torch.load(f"{str(args.init_model)}/train/last_epoch_object.cpt")['scheduler_G']
+        stdict_D = torch.load(f"{str(args.init_model)}/train/last_epoch_object.cpt")['scheduler_D']
+
+        scheduler_G.load_state_dict(stdict_G)
+        scheduler_D.load_state_dict(stdict_D)
+
+    if hasattr(args,'reuse') and eval(args.reuse):
+        if not hasattr(args, 'init_model') or str(args.init_model) == 'None':
+            raise CustomException('reuse flag is True, but init_model was not set')
+
     return scheduler_G, scheduler_D
 
 def get_scheduler(args, optimizer):
@@ -61,5 +76,16 @@ def get_scheduler(args, optimizer):
                                                    )
         else:
             raise ValueError("Not implemented scheduler in this version. Please check schedulers.py")
+
+    if hasattr(args, 'init_model') and str(args.init_model) != 'None' \
+            and hasattr(args, 'scheduler') and str(args.scheduler) is not None:
+        stdict = torch.load(f"{str(args.init_model)}/train/last_epoch_object.cpt")['scheduler']
+
+        scheduler.load_state_dict(stdict)
+
+    if hasattr(args,'reuse') and eval(args.reuse):
+        if not hasattr(args, 'init_model') or str(args.init_model) == 'None':
+            raise CustomException('reuse flag is True, but init_model was not set')
+
     return scheduler
 

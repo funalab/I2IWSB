@@ -77,6 +77,9 @@ def get_train_args_DF(args, optimizer, scheduler, save_dir, device):
     if 'save_model_freq' in args:
         trainer_args["save_model_freq"] = int(args.save_model_freq)
 
+    if hasattr(args, 'reuse') and eval(args.reuse):  # 追加で学習を行うかどうか
+        trainer_args['reuse'] = eval(args.reuse)
+
     return trainer_args
 
 def get_test_args_DF(args, save_dir, device, test_dataset):
@@ -150,6 +153,9 @@ def get_train_args(args, optimizer, scheduler, save_dir, device):
 
     if 'save_model_freq' in args:
         trainer_args["save_model_freq"] = int(args.save_model_freq)
+
+    if hasattr(args, 'reuse') and eval(args.reuse):  # 追加で学習を行うかどうか
+        trainer_args['reuse'] = eval(args.reuse)
 
     return trainer_args
 

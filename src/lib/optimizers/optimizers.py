@@ -1,5 +1,6 @@
 import torch
 import torch.optim as optim
+from src.lib.utils.utils import CustomException
 
 
 def modify_state(args, optimizer):
@@ -138,7 +139,7 @@ def get_optimizer_GAN(args, model_G, model_D):
     else:
         raise ValueError('Unknown optimizer_D name: {}'.format(args.optimizer_d))
 
-    if hasattr(args, 'init_model') and args.init_model is not None :
+    if hasattr(args, 'init_model') and str(args.init_model) != 'None':
         stdict_G = torch.load(f"{str(args.init_model)}/train/last_epoch_object.cpt")['optimizer_G']
         stdict_D = torch.load(f"{str(args.init_model)}/train/last_epoch_object.cpt")['optimizer_D']
 
@@ -147,6 +148,10 @@ def get_optimizer_GAN(args, model_G, model_D):
 
         optimizer_G = modify_state(args, optimizer_G)
         optimizer_D = modify_state(args, optimizer_D)
+
+    if hasattr(args,'reuse') and eval(args.reuse):
+        if not hasattr(args, 'init_model') or str(args.init_model) == 'None':
+            raise CustomException('reuse flag is True, but init_model was not set')
 
     return optimizer_G, optimizer_D
 
@@ -209,4 +214,16 @@ def get_optimizer(args, model):
             )
     else:
         raise ValueError('Unknown optimizer name: {}'.format(args.optimizer))
+
+    if hasattr(args, 'init_model') and str(args.init_model) != 'None':
+        stdict = torch.load(f"{str(args.init_model)}/train/last_epoch_object.cpt")['optimizer']
+
+        optimizer.load_state_dict(stdict)
+
+        optimizer = modify_state(args, optimizer)
+
+    if hasattr(args,'reuse') and eval(args.reuse):
+        if not hasattr(args, 'init_model') or str(args.init_model) == 'None':
+            raise CustomException('reuse flag is True, but init_model was not set')
+
     return optimizer
