@@ -160,7 +160,7 @@ class cWGANGPTester(object):
                                         filename=name,
                                         img=composite)
 
-        return loss_D, loss_G, ssims, mses, maes, psnrs
+        return loss_G, loss_D, ssims, mses, maes, psnrs
 
     def test(self, model_G, model_D, data_iter, phase="test", epoch=0):
         start = time.time()
