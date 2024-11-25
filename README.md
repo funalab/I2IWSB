@@ -98,7 +98,7 @@ See ```requirements.txt``` for details.
         ```sh
         % python src/tools/custom/i2iwsb/test.py --conf_file confs/demo/test.cfg --device cpu --model_dir models/i2iwsb --save_dir results/demo/i2iwsb/test
         ```
-    The processing time of above example will be about 52 sec on GPU (NVIDIA A100) and about 3035 sec on CPU.
+    The processing time of above example will be about 50 sec on GPU (NVIDIA A100) and about 3000 sec on CPU.
 
 ## How to train and run model
 
