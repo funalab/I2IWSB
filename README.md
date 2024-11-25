@@ -92,11 +92,11 @@ See ```requirements.txt``` for details.
 4. Run the model.
    - On GPU (Specify GPU device name):
         ```sh
-        % python src/tools/custom/i2iwsb/test.py --conf_file confs/demo/test.cfg --device cuda:1 --model_dir models/i2iwsb --save_dir results/demo/i2iwsb
+        % python src/tools/custom/i2iwsb/test.py --conf_file confs/demo/test.cfg --device cuda:1 --model_dir models/i2iwsb --save_dir results/demo/i2iwsb/test
         ```
    - On CPU:
         ```sh
-        % python src/tools/custom/i2iwsb/test.py --conf_file confs/demo/test.cfg --device cpu --model_dir models/i2iwsb --save_dir results/demo/i2iwsb
+        % python src/tools/custom/i2iwsb/test.py --conf_file confs/demo/test.cfg --device cpu --model_dir models/i2iwsb --save_dir results/demo/i2iwsb/test
         ```
     The processing time of above example will be about 52 sec on GPU (NVIDIA A100) and about 3035 sec on CPU.
 
