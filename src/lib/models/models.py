@@ -342,7 +342,6 @@ def get_train_model_WSB(args, device):
 
 def get_test_model_WSB(args, device):
     if args.model_dir is not None:
-        best_metrics = None
         if args.eval_metric != 'None':
             eval_metric = str(args.eval_metric)
             if "*" in args.model_dir:
