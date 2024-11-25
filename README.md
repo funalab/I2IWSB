@@ -8,14 +8,14 @@ This project is carried out in [Funahashi Lab. at Keio University](https://fun.b
 Our model performs image-to-image translation that converts \textit{z}-stacked bright-field microscopy images 
 with 3 channels into images of multiple subcellular components with 5 channels.
 
-![task](raw/task.jpg)
+![task](raw/task.png)
 
 The architecture of our model consisted of the I$^{2}$SB [[1](#ref1)] framework,
 which directly learns probabilistic transformations between images, and the cWGAN-GP [[2](#ref2)]
 framework, which solves the minimization problem of the
 Wasserstein distance between distributions
 
-![proposed_architecture](raw/proposed_architecture.jpg)
+![proposed_architecture](raw/proposed_architecture.png)
 
 The detailed information on this code is described in our paper published on [Label-free multiplex microscopic imaging by image-to-image translation overcoming the trade-off between pixel- and image-level similarity](hoge).
 
@@ -28,7 +28,7 @@ Subcellular components (names of channels that captured them): mitochondria (Mit
 and actin cytoskeleton (AGP); nucleoli and cytoplasmic RNA (RNA); endoplasmic reticulum (ER);
 and nucleus (DNA). The models and channel names are described in detail in the Methods section.
 
-![representative_images](raw/representative_images.jpg)
+![representative_images](raw/representative_images.png)
 
 Note: 
 We used the dataset cpg0000-jump-pilot [[5](#ref5)],
