@@ -27,6 +27,7 @@ def create_model_parser(remaining_argv, **conf_dict):
 
 def create_runtime_parser(remaining_argv, **conf_dict):
     # Runtime options
+    print(conf_dict.keys())
     parser = argparse.ArgumentParser(description='Runtime Parameters', add_help=False)
     parser.set_defaults(**conf_dict)
     parser.add_argument('--save_dir',
