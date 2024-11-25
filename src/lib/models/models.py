@@ -380,6 +380,7 @@ def get_test_model_WSB(args, device):
                 if best_model_dir is None:
                     raise ValueError('Cannot search best result. Specified trained model')
                 else:
+                    print(f"[Validation score] {eval_metric}:{best_metrics}")
                     best_model_path_G = os.path.join(best_model_dir, f"best_{eval_metric}_model_G.pth")
                     best_model_path_D = os.path.join(best_model_dir, f"best_{eval_metric}_model_D.pth")
             else:
@@ -417,6 +418,7 @@ def get_test_model_WSB(args, device):
                 if best_model_dir is None:
                     raise ValueError('Cannot search best result. Specified trained model')
                 else:
+                    print(f"[Validation score] {eval_metric}:{best_metrics}")
                     best_model_path_G = os.path.join(best_model_dir, f"best_{eval_metric}_model_G.pth")
                     best_model_path_D = os.path.join(best_model_dir, f"best_{eval_metric}_model_D.pth")
             else:
@@ -424,7 +426,6 @@ def get_test_model_WSB(args, device):
                 best_model_path_G = os.path.join(best_model_dir, f"best_{eval_metric}_model_G.pth")
                 best_model_path_D = os.path.join(best_model_dir, f"best_{eval_metric}_model_D.pth")
 
-        print(f"[Validation score] {eval_metric}:{best_metrics}")
         print('Load generator from {}'.format(best_model_path_G))
         print('Load discriminator from {}'.format(best_model_path_D))
         if args.device == 'cpu':
