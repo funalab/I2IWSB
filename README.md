@@ -98,20 +98,20 @@ See ```requirements.txt``` for details.
         ```sh
         % python src/tools/custom/i2iwsb/test.py --conf_file confs/demo/test.cfg --device cpu --model_dir models/i2iwsb --save_dir results/demo/i2iwsb
         ```
-    The processing time of above example will be about 30 sec on GPU (NVIDIA V100).
+    The processing time of above example will be about 30 sec on GPU (NVIDIA A100) and about 3035 sec on CPU.
 
 ## How to train and run model
 
 1. Train model with the demo dataset.
 
     ```sh
-    % python src/tools/custom/i2iwsb/train.py --conf_file confs/demo/train_fold1.cfg
+    % python src/tools/custom/i2iwsb/train.py --conf_file confs/demo/trial/train_fold1.cfg  --device cuda:1
     ```
 
 2. Run model to inference.
 
     ```sh
-    % python src/tools/custom/i2iwsb/test.py --conf_file confs/demo/test.cfg
+    % python src/tools/custom/i2iwsb/test.py --conf_file confs/demo/trial/test.cfg --device cuda:1
     ```
 
 
