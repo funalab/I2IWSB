@@ -211,7 +211,7 @@ def get_test_model_DF(args, device):
                     raise ValueError('Cannot search best result. Specified trained model')
                 else:
                     best_model_path = os.path.join(best_model_dir, f"best_{eval_metric}_model.pth")
-                print(f"[Validation score 1] {str(args.eval_metric)}:{best_metrics}")
+                print(f"[Validation score] {str(args.eval_metric)}:{best_metrics}")
             else:
                 best_model_dir = args.model_dir
                 best_model_path = os.path.join(best_model_dir, f"best_{eval_metric}_model.pth")
@@ -247,7 +247,7 @@ def get_test_model_DF(args, device):
                     raise ValueError('Cannot search best result. Specified trained model')
                 else:
                     best_model_path = os.path.join(best_model_dir, f"best_{eval_metric}_model.pth")
-                print(f"[Validation score 2] {eval_metric}:{best_metrics}")
+                print(f"[Validation score] {eval_metric}:{best_metrics}")
             else:
                 best_model_dir = args.model_dir
                 best_model_path = os.path.join(best_model_dir, f"best_{eval_metric}_model.pth")
@@ -379,7 +379,7 @@ def get_test_model_I2IWSB(args, device):
                 if best_model_dir is None:
                     raise ValueError('Cannot search best result. Specified trained model')
                 else:
-                    print(f"[Validation score 3] {eval_metric}:{best_metrics}")
+                    print(f"[Validation score] {eval_metric}:{best_metrics}")
                     best_model_path_G = os.path.join(best_model_dir, f"best_{eval_metric}_model_G.pth")
                     best_model_path_D = os.path.join(best_model_dir, f"best_{eval_metric}_model_D.pth")
             else:
@@ -417,7 +417,7 @@ def get_test_model_I2IWSB(args, device):
                 if best_model_dir is None:
                     raise ValueError('Cannot search best result. Specified trained model')
                 else:
-                    print(f"[Validation score 4] {eval_metric}:{best_metrics}")
+                    print(f"[Validation score] {eval_metric}:{best_metrics}")
                     best_model_path_G = os.path.join(best_model_dir, f"best_{eval_metric}_model_G.pth")
                     best_model_path_D = os.path.join(best_model_dir, f"best_{eval_metric}_model_D.pth")
             else:
