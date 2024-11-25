@@ -426,7 +426,7 @@ def get_test_model_I2IWSB(args, device):
                 best_model_path_D = os.path.join(best_model_dir, f"best_{eval_metric}_model_D.pth")
 
         print('Load generator from {}'.format(best_model_path_G))
-        print('Load discriminator from {}'.format(best_model_path_D))
+        print('HOHOH Load discriminator from {}'.format(best_model_path_D))
         if args.device == 'cpu':
             model_G = torch.load(best_model_path_G, map_location=torch.device('cpu'))
             model_D = torch.load(best_model_path_D, map_location=torch.device('cpu'))
