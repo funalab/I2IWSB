@@ -10,7 +10,7 @@ with 3 channels into images of multiple subcellular components with 5 channels.
 
 ![task](raw/task.png)
 
-The architecture of our model consisted of the I$^{2}$SB [[1](#ref1)] framework,
+The architecture of our model consisted of the I2SB [[1](#ref1)] framework,
 which directly learns probabilistic transformations between images, and the cWGAN-GP [[2](#ref2)]
 framework, which solves the minimization problem of the
 Wasserstein distance between distributions
@@ -23,7 +23,7 @@ The detailed information on this code is described in our paper published on [La
 
 Input bright-field images were captured as three slices spaced at ±4 μm along the z-axis.
 Right panel shows the output images of different models: the ground truth, Palette [[3](#ref3)], 
-guided-I2I [[4](#ref4)], I$^{2}$SB [[1](#ref1)], and our model.
+guided-I2I [[4](#ref4)], I2SB [[1](#ref1)], and our model.
 Subcellular components (names of channels that captured them): mitochondria (Mito); Golgi, plasma membrane,
 and actin cytoskeleton (AGP); nucleoli and cytoplasmic RNA (RNA); endoplasmic reticulum (ER);
 and nucleus (DNA). The models and channel names are described in detail in the Methods section.
