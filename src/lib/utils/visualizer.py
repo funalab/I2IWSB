@@ -53,7 +53,7 @@ def show_loss(log_path, save_dir, filename, show_mode=True):
     ax.spines["bottom"].set_linewidth(linewidth)
     ax.set_axisbelow(True)
 
-    plt.savefig(f"{save_dir}/{filename}.png", bbox_inches="tight", dpi=600)
+    #plt.savefig(f"{save_dir}/{filename}.png", bbox_inches="tight", dpi=600)
     plt.savefig(f"{save_dir}/{filename}.pdf", bbox_inches="tight", dpi=600)
     
     if show_mode:
@@ -82,7 +82,7 @@ def show_loss(log_path, save_dir, filename, show_mode=True):
     ax.spines["bottom"].set_linewidth(linewidth)
     ax.set_axisbelow(True)
 
-    plt.savefig(f"{save_dir}/{filename}_log.png", bbox_inches="tight", dpi=600)
+    #plt.savefig(f"{save_dir}/{filename}_log.png", bbox_inches="tight", dpi=600)
     plt.savefig(f"{save_dir}/{filename}_log.pdf", bbox_inches="tight", dpi=600)
 
     if show_mode:
@@ -139,7 +139,7 @@ def show_loss_distributed(log_path, save_dir, filename, show_mode=True):
     ax.spines["bottom"].set_linewidth(linewidth)
     ax.set_axisbelow(True)
 
-    plt.savefig(f"{save_dir}/{filename}.png", bbox_inches="tight", dpi=600)
+    #plt.savefig(f"{save_dir}/{filename}.png", bbox_inches="tight", dpi=600)
     plt.savefig(f"{save_dir}/{filename}.pdf", bbox_inches="tight", dpi=600)
 
     if show_mode:
@@ -168,7 +168,7 @@ def show_loss_distributed(log_path, save_dir, filename, show_mode=True):
     ax.spines["bottom"].set_linewidth(linewidth)
     ax.set_axisbelow(True)
 
-    plt.savefig(f"{save_dir}/{filename}_log.png", bbox_inches="tight", dpi=600)
+    #plt.savefig(f"{save_dir}/{filename}_log.png", bbox_inches="tight", dpi=600)
     plt.savefig(f"{save_dir}/{filename}_log.pdf", bbox_inches="tight", dpi=600)
 
     if show_mode:
@@ -254,7 +254,7 @@ def show_loss_WSB(log_path, save_dir, filename, show_mode=True):
     ax.spines["bottom"].set_linewidth(linewidth)
     ax.set_axisbelow(True)
 
-    plt.savefig(f"{save_dir}/{filename}.png", bbox_inches="tight", dpi=600)
+    #plt.savefig(f"{save_dir}/{filename}.png", bbox_inches="tight", dpi=600)
     plt.savefig(f"{save_dir}/{filename}.pdf", bbox_inches="tight", dpi=600)
 
     if show_mode:
@@ -286,7 +286,7 @@ def show_loss_WSB(log_path, save_dir, filename, show_mode=True):
     ax.spines["bottom"].set_linewidth(linewidth)
     ax.set_axisbelow(True)
 
-    plt.savefig(f"{save_dir}/{filename}_log.png", bbox_inches="tight", dpi=600)
+    #plt.savefig(f"{save_dir}/{filename}_log.png", bbox_inches="tight", dpi=600)
     plt.savefig(f"{save_dir}/{filename}_log.pdf", bbox_inches="tight", dpi=600)
 
     if show_mode:
@@ -329,7 +329,7 @@ def show_loss_WSB(log_path, save_dir, filename, show_mode=True):
     ax.spines["bottom"].set_linewidth(linewidth)
     ax.set_axisbelow(True)
 
-    plt.savefig(f"{save_dir}/{filename}_generator.png", bbox_inches="tight", dpi=600)
+    #plt.savefig(f"{save_dir}/{filename}_generator.png", bbox_inches="tight", dpi=600)
     plt.savefig(f"{save_dir}/{filename}_generator.pdf", bbox_inches="tight", dpi=600)
 
     if show_mode:
@@ -359,7 +359,7 @@ def show_loss_WSB(log_path, save_dir, filename, show_mode=True):
     ax.spines["bottom"].set_linewidth(linewidth)
     ax.set_axisbelow(True)
 
-    plt.savefig(f"{save_dir}/{filename}_generator_log.png", bbox_inches="tight", dpi=600)
+    #plt.savefig(f"{save_dir}/{filename}_generator_log.png", bbox_inches="tight", dpi=600)
     plt.savefig(f"{save_dir}/{filename}_generator_log.pdf", bbox_inches="tight", dpi=600)
 
     if show_mode:
@@ -397,7 +397,7 @@ def show_loss_WSB(log_path, save_dir, filename, show_mode=True):
     ax.spines["bottom"].set_linewidth(linewidth)
     ax.set_axisbelow(True)
 
-    plt.savefig(f"{save_dir}/{filename}_discriminator.png", bbox_inches="tight", dpi=600)
+    #plt.savefig(f"{save_dir}/{filename}_discriminator.png", bbox_inches="tight", dpi=600)
     plt.savefig(f"{save_dir}/{filename}_discriminator.pdf", bbox_inches="tight", dpi=600)
 
     if show_mode:
@@ -426,7 +426,7 @@ def show_loss_WSB(log_path, save_dir, filename, show_mode=True):
     ax.spines["bottom"].set_linewidth(linewidth)
     ax.set_axisbelow(True)
 
-    plt.savefig(f"{save_dir}/{filename}_discriminator_log.png", bbox_inches="tight", dpi=600)
+    #plt.savefig(f"{save_dir}/{filename}_discriminator_log.png", bbox_inches="tight", dpi=600)
     plt.savefig(f"{save_dir}/{filename}_discriminator_log.pdf", bbox_inches="tight", dpi=600)
 
     if show_mode:
@@ -479,7 +479,7 @@ def show_metrics(eval_metrics, log_path, save_dir, show_mode=True):
     ax.spines["bottom"].set_linewidth(linewidth)
     ax.set_axisbelow(True)
 
-    plt.savefig(f"{save_dir}/{eval_metrics}.png", bbox_inches="tight", dpi=600)
+    #plt.savefig(f"{save_dir}/{eval_metrics}.png", bbox_inches="tight", dpi=600)
     plt.savefig(f"{save_dir}/{eval_metrics}.pdf", bbox_inches="tight", dpi=600)
 
     if show_mode:
@@ -524,7 +524,7 @@ def show_metrics_validation(eval_metrics, log_path, save_dir, show_mode=True):
     ax.spines["bottom"].set_linewidth(linewidth)
     ax.set_axisbelow(True)
 
-    plt.savefig(f"{save_dir}/{eval_metrics}.png", bbox_inches="tight", dpi=600)
+    #plt.savefig(f"{save_dir}/{eval_metrics}.png", bbox_inches="tight", dpi=600)
     plt.savefig(f"{save_dir}/{eval_metrics}.pdf", bbox_inches="tight", dpi=600)
 
     if show_mode:

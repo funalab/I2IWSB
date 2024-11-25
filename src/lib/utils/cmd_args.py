@@ -7,36 +7,34 @@ def create_dataset_parser(remaining_argv, **conf_dict):
     parser.set_defaults(**conf_dict)
     parser.add_argument('--root_path',
                         type=str,
-                        help='/path/to/dataset')
+                        help='/path/to/dataset', default=conf_dict['root_path'])
     args, remaining_argv = parser.parse_known_args(remaining_argv)
 
     return parser, args, remaining_argv
 
 
 def create_model_parser(remaining_argv, **conf_dict):
-    # generator class options
+    # Model options
     parser = argparse.ArgumentParser(description='Model Parameters', add_help=False)
     parser.set_defaults(**conf_dict)
 
     parser.add_argument('--model',
-                        help='model name')
+                        help='model name', default=conf_dict['model'])
     args, remaining_argv = parser.parse_known_args(remaining_argv)
 
     return parser, args, remaining_argv
 
 
 def create_runtime_parser(remaining_argv, **conf_dict):
-    # Model runtime options (for adversarial network model)
+    # Runtime options
     parser = argparse.ArgumentParser(description='Runtime Parameters', add_help=False)
     parser.set_defaults(**conf_dict)
     parser.add_argument('--save_dir',
-                        help='Save directory')
+                        help='Save directory', default=conf_dict['save_dir'])
     parser.add_argument('--model_dir',
-                        help='Model directory which trained files are saved')
+                        help='Model directory which trained files are saved', default=conf_dict['model_dir'])
     parser.add_argument('--device',
-                        help='CPU/GPU ID')
-    parser.add_argument('--phase',
-                        help='Specify mode (train, test)')
+                        help='CPU/GPU ID', default=conf_dict['device'])
     args, remaining_argv = parser.parse_known_args(remaining_argv)
 
     return parser, args, remaining_argv
@@ -65,7 +63,7 @@ def config_paraser():
     ''' Parameters '''
     # Dataset options
     dataset_parser, dataset_args, remaining_argv = create_dataset_parser(remaining_argv, **dataset_conf_dict)
-    # Modeloptions
+    # Model options
     model_parser, model_args, remaining_argv = create_model_parser(remaining_argv, **model_conf_dict)
     # Runtime options
     runtime_parser, runtime_args, remaining_argv = create_runtime_parser(remaining_argv, **runtime_conf_dict)
