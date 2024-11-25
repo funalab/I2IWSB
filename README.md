@@ -59,7 +59,7 @@ See ```requirements.txt``` for details.
 ```
 2. Install requirements.
 ```sh
-% cd wassersteinschroedingerbridgepaper
+% cd I2IWSB
 % python -m venv venv
 % source ./venv/bin/activate
 % pip install --upgrade pip
