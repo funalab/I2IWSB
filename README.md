@@ -73,9 +73,9 @@ See ```requirements.txt``` for details.
 
         ```sh
         % mkdir models
-        % wget -P models/i2iwsb.tar.gz https://drive.usercontent.google.com/download?id=1klNecJvscby4DybfYEJeg8omuaRHQIeT&confirm=xxx
+        % wget -P models/i2iwsb.tar.gz "https://drive.usercontent.google.com/download?id=1klNecJvscby4DybfYEJeg8omuaRHQIeT&confirm=xxx"
         % tar zxvf models/i2iwsb.tar.gz -C models
-        % wget -P datasets/demo/data.tar.gz https://drive.usercontent.google.com/download?id=1xXsuKHGft_OpZxGzrthUIZUhYq20JYQW&confirm=xxx
+        % wget -P datasets/demo/data.tar.gz "https://drive.usercontent.google.com/download?id=1xXsuKHGft_OpZxGzrthUIZUhYq20JYQW&confirm=xxx"
         % tar zxvf datasets/demo/data.tar.gz -C datasets/demo
         ``` 
 
