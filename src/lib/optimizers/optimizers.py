@@ -18,7 +18,7 @@ def modify_state(args, optimizer):
     return optimizer
 
 
-def get_optimizer_GAN(args, model_G, model_D):
+def get_optimizer_WSB(args, model_G, model_D):
     if args.optimizer_g == 'SGD':
         optimizer_G = optim.SGD(
             params=model_G.parameters(),

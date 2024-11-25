@@ -11,48 +11,36 @@ batch_name="2020_11_04_CPJUMP1"
 # set the plate to be downloaded
 # folder size of each plate is about 60 GB.
 
-# A549 24 h
-#plate_names=(
-#"BR00116991__2020-11-05T19_51_35-Measurement1"
-#"BR00116992__2020-11-05T21_31_31-Measurement1"
-#"BR00116993__2020-11-05T23_11_39-Measurement1"
-#"BR00116994__2020-11-06T00_59_44-Measurement1"
-#)
-#
-## A549 48 h
-#plate_names=(
-#"BR00117015__2020-11-10T23_51_39-Measurement1"
-#"BR00117016__2020-11-11T02_32_26-Measurement1"
-#"BR00117017__2020-11-10T18_25_46-Measurement1"
-#"BR00117019__2020-11-10T21_10_40-Measurement1"
-#)
+# U2OS 48 h
+plate_names=(
+"BR00117010__2020-11-08T18_18_00-Measurement1"
+"BR00117011__2020-11-08T19_57_47-Measurement1"
+"BR00117012__2020-11-08T14_58_34-Measurement1"
+"BR00117013__2020-11-08T16_38_19-Measurement1"
+)
 
 # U2OS 24 h
-#plate_names=(
-#"BR00116995__2020-11-06T02_41_05-Measurement1"
-#"BR00117024__2020-11-06T04_20_37-Measurement1"
-#"BR00117025__2020-11-06T06_00_19-Measurement1"
-#"BR00117026__2020-11-06T07_39_45-Measurement1"
-#)
+plate_names=(
+"BR00116995__2020-11-06T02_41_05-Measurement1"
+"BR00117024__2020-11-06T04_20_37-Measurement1"
+"BR00117025__2020-11-06T06_00_19-Measurement1"
+"BR00117026__2020-11-06T07_39_45-Measurement1"
+)
 
-## U2OS 48 h
-#plate_names=(
-#"BR00117010__2020-11-08T18_18_00-Measurement1"
-#"BR00117011__2020-11-08T19_57_47-Measurement1"
-#"BR00117012__2020-11-08T14_58_34-Measurement1"
-#"BR00117013__2020-11-08T16_38_19-Measurement1"
-#)
+# A549 48 h
+plate_names=(
+"BR00117015__2020-11-10T23_51_39-Measurement1"
+"BR00117016__2020-11-11T02_32_26-Measurement1"
+"BR00117017__2020-11-10T18_25_46-Measurement1"
+"BR00117019__2020-11-10T21_10_40-Measurement1"
+)
 
-# A549 24 h and 48 h
+# A549 24 h
 plate_names=(
 "BR00116991__2020-11-05T19_51_35-Measurement1"
 "BR00116992__2020-11-05T21_31_31-Measurement1"
 "BR00116993__2020-11-05T23_11_39-Measurement1"
 "BR00116994__2020-11-06T00_59_44-Measurement1"
-"BR00117015__2020-11-10T23_51_39-Measurement1"
-"BR00117016__2020-11-11T02_32_26-Measurement1"
-"BR00117017__2020-11-10T18_25_46-Measurement1"
-"BR00117019__2020-11-10T21_10_40-Measurement1"
 )
 
 # set save root dir (local)

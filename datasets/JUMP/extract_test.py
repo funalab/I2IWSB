@@ -5,7 +5,7 @@ import numpy as np
 def gather_pos(filepath_list: list):
     pos_dict = {}
     for filepath in filepath_list:
-        # filepath = 'BR00117011__2020-11-08T19_57_47-Measurement1/Images/r09c16f09p01'
+        # e.g.) filepath = 'BR00117011__2020-11-08T19_57_47-Measurement1/Images/r09c16f09p01'
         dirpath = os.path.dirname(filepath)
         filename = os.path.basename(filepath)
         pos_tmp = filename[:filename.rfind('f')]
@@ -46,7 +46,7 @@ def choice_site(rg, filepath_list: list, pos_dict: dict, num_site_per_well: int)
     return choiced_filepath_list
 
 
-def write_list_to_txt(savefilepath: str, path_list: list):  # listをtextに書き出し
+def write_list_to_txt(savefilepath: str, path_list: list):
     with open(savefilepath, 'w') as f:
         for ind, d in enumerate(path_list):
             if ind < len(path_list) - 1:
@@ -66,7 +66,7 @@ def main(args):
     # load test
     test_filepath_list = load_filepath_list(txt_path=test_path)
 
-    # gather pos
+    # gather position
     pos_dict = gather_pos(filepath_list=test_filepath_list)
 
     # choice site

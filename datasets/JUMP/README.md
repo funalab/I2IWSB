@@ -63,11 +63,7 @@ The plate_names list to be specified in ```download_datasets_JUMP.sh``` can be s
 aws s3 ls s3://cellpainting-gallery/cpg0000-jump-pilot/source_4/images/2020_11_04_CPJUMP1/images/ --no-sign-request
 ```
 
-#### 3. Check data
-please check data using ```../notebooks/JUMP_visualization.ipynb```
-
-
-#### 4. Build datasets
+#### 3. Build datasets
 ```shell
 python build_datasets_JUMP.py --root_path <path> --save_path <save_path> --test_ratio <test_ratio> \
                               --test_split_mode <test_split_mode> --fold_num <fold_num>

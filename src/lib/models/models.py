@@ -16,115 +16,6 @@ wrapper function to get model
 '''
 
 '''
-GAN
-'''
-def get_train_model_GAN(args, device):
-
-    input_nc = int(args.in_channels)+int(args.out_channels)
-    in_channels = int(args.in_channels)
-    out_channels = int(args.out_channels)
-    if hasattr(args, 'dim_match') and eval(args.dim_match):
-        if int(args.in_channels) > int(args.out_channels):
-            input_nc = int(args.in_channels) * 2
-            in_channels = int(args.in_channels)
-            out_channels = int(args.in_channels)
-        elif int(args.in_channels) < int(args.out_channels):
-            input_nc = int(args.out_channels) * 2
-            in_channels = int(args.out_channels)
-            out_channels = int(args.out_channels)
-
-    if args.model == 'cWGAN-GP':
-        model_G = UNet(n_classes=out_channels,
-                       in_channels=in_channels,
-                       depth=int(args.depth),
-                       wf=int(args.wf),
-                       padding=eval(args.padding),
-                       batch_norm=eval(args.batch_norm),
-                       up_mode=str(args.up_mode),
-                       )
-        model_D = Discriminator(input_nc=input_nc,
-                                ndf=int(args.ndf),
-                                n_layers=int(args.n_layers))
-    else:
-        raise NotImplementedError
-
-    if hasattr(args, 'init_model') and str(args.init_model) != 'None':
-        stdict_G = torch.load(f"{str(args.init_model)}/train/last_epoch_object.cpt")['model_G']
-        stdict_D = torch.load(f"{str(args.init_model)}/train/last_epoch_object.cpt")['model_D']
-
-        model_G.load_state_dict(stdict_G)
-        model_D.load_state_dict(stdict_D)
-
-    if hasattr(args,'reuse') and eval(args.reuse):
-        if not hasattr(args, 'init_model') or str(args.init_model) == 'None':
-            raise CustomException('reuse flag is True, but init_model was not set')
-
-    model_G = model_G.to(device)
-    model_D = model_D.to(device)
-
-    return model_G, model_D
-
-
-def get_test_model_GAN(args, device):
-    if args.model_dir is not None:
-        eval_metric = str(args.eval_metric)
-        if "*" in args.model_dir:
-            if hasattr(args, "exp_name"):
-                folder_name = str(args.exp_name)
-            else:
-                folder_name = os.path.basename(os.path.dirname(args.conf_file))
-
-            set_dir = os.path.dirname(args.model_dir)
-            model_dirs = glob(os.path.join(set_dir, folder_name, "*", "train", eval_metric))
-
-            best_model_dir = None
-            best_metrics = 0.0 if eval(args.eval_maximize) else 10.0**13
-
-            for model_dir in model_dirs:
-                try:
-                    # open best_result.json
-                    with open(f"{model_dir}/best_{eval_metric}_result.json", "r") as f:
-                        load_result = json.load(f)
-                except:
-                    load_result = None
-
-                if load_result is not None:
-                    # search best result
-                    current_val = load_result[f"best {args.eval_metric}"]
-
-                    if eval(args.eval_maximize):
-                        if current_val >= best_metrics:
-                            best_metrics = current_val
-                            best_model_dir = model_dir
-                    else:
-                        if current_val <= best_metrics:
-                            best_metrics = current_val
-                            best_model_dir = model_dir
-            if best_model_dir is None:
-                raise ValueError('Cannot search best result. Specified trained model')
-            else:
-                best_model_path_G = os.path.join(best_model_dir, f"best_{eval_metric}_model_G.pth")
-                best_model_path_D = os.path.join(best_model_dir, f"best_{eval_metric}_model_D.pth")
-        else:
-            best_model_dir = args.model_dir
-            best_model_path_G = os.path.join(best_model_dir, f"best_{eval_metric}_model_G.pth")
-            best_model_path_D = os.path.join(best_model_dir, f"best_{eval_metric}_model_D.pth")
-
-        print(f"[Validation score] {str(args.eval_metric)}:{best_metrics}")
-        print('Load generator from {}'.format(best_model_path_G))
-        print('Load discriminator from {}'.format(best_model_path_D))
-        model_G = torch.load(best_model_path_G)
-        model_D = torch.load(best_model_path_D)
-        model_G.phase = args.phase
-        model_D.phase = args.phase
-        model_G = model_G.to(device)
-        model_D = model_D.to(device)
-    else:
-        raise ValueError('Specified trained model')
-
-    return model_G, model_D, best_model_dir
-
-'''
 diffusion model
 '''
 def get_train_model_DF(args, device):
@@ -393,7 +284,7 @@ def get_train_model_WSB(args, device):
             in_channels = int(args.out_channels) * 2
             out_channels = int(args.out_channels)
 
-    if args.model == 'cWSB-GP':
+    if args.model == 'i2iwsb':
 
         attention_ds = []
         for res in eval(args.attn_res):
@@ -536,8 +427,12 @@ def get_test_model_WSB(args, device):
         print(f"[Validation score] {eval_metric}:{best_metrics}")
         print('Load generator from {}'.format(best_model_path_G))
         print('Load discriminator from {}'.format(best_model_path_D))
-        model_G = torch.load(best_model_path_G)
-        model_D = torch.load(best_model_path_D)
+        if args.device == 'cpu':
+            model_G = torch.load(best_model_path_G, map_location=torch.device('cpu'))
+            model_D = torch.load(best_model_path_D, map_location=torch.device('cpu'))
+        else:
+            model_G = torch.load(best_model_path_G)
+            model_D = torch.load(best_model_path_D)
         model_G.phase = args.phase
         model_D.phase = args.phase
         model_G = model_G.to(device)

@@ -1,65 +1,129 @@
-# PairedImageToImageTranslation
+# ImageToImageWassersteinSchrödingerBridge
+
+This is the code for [Label-free multiplex microscopic imaging by image-to-image translation overcoming the trade-off between pixel- and image-level similarity](hoge).
+This project is carried out in [Funahashi Lab. at Keio University](https://fun.bio.keio.ac.jp/).
 
 ## Overview
 
-対あり画像変換タスク
+Our model performs image-to-image translation that converts \textit{z}-stacked bright-field microscopy images 
+with 3 channels into images of multiple subcellular components with 5 channels.
 
-- repository
-  - https://gitlab.com/funalab/pairedimagetoimagetranslation
+![task](raw/task.jpg)
 
-### Datasets
-- JUMP-Cell Painting Consortium
-  - 明視野顕微鏡像 to 蛍光顕微鏡像の画像変換タスクに利用
-  - https://jump-cellpainting.broadinstitute.org/
+The architecture of our model consisted of the I$^{2}$SB [[1](#ref1)] framework,
+which directly learns probabilistic transformations between images, and the cWGAN-GP [[2](#ref2)]
+framework, which solves the minimization problem of the
+Wasserstein distance between distributions
 
-### Models
-- GAN
-  - [cWGAN-GP](https://www.nature.com/articles/s41598-022-12914-x)
-- Diffusion / Schrödinger Bridge
-  - [Palette](https://arxiv.org/abs/2111.05826)
-  - [guided-I2I](https://arxiv.org/abs/2303.08863)
-  - [I2SB](https://arxiv.org/abs/2302.05872)
-- Custom
-  - I2WSB: Image-to-Image Wasserstein Schrödinger Bridge
-    - 2024/02/19 Created by Morikura
+![proposed_architecture](raw/proposed_architecture.jpg)
 
-## Usage
-### (1) Create virtual environments
+The detailed information on this code is described in our paper published on [Label-free multiplex microscopic imaging by image-to-image translation overcoming the trade-off between pixel- and image-level similarity](hoge).
 
-#### venv
-```shell
-python3 -m venv venv
-source venv/bin/activate
-pip install --upgrade pip
-pip3 install -r requirements.txt
+## Performance
+
+Input bright-field images were captured as three slices spaced at $\pm$4 $\mu$m along the \textit{z}-axis.
+Right panel shows the output images of different models: the ground truth, Palette [[3](#ref3)], 
+guided-I2I [[4](#ref4)], I$^{2}$SB [[1](#ref1)], and our model.
+Subcellular components (names of channels that captured them): mitochondria (Mito); Golgi, plasma membrane,
+and actin cytoskeleton (AGP); nucleoli and cytoplasmic RNA (RNA); endoplasmic reticulum (ER);
+and nucleus (DNA). The models and channel names are described in detail in the Methods section.
+
+![representative_images](raw/representative_images.jpg)
+
+Note: 
+We used the dataset cpg0000-jump-pilot [[5](#ref5)],
+available from the [Cell Painting Gallery](https://registry.opendata.aws/cellpainting-gallery/)  [[6](#ref6)]
+in the Registry of Open Data on AWS.
+
+## Requirements
+
+- [Python 3.10.11](https://www.python.org/downloads/)
+- [Pytorch 2.0.0](https://pytorch.org/)
+- [Matplotlib 3.7.1](https://matplotlib.org/)
+- [NumPy 1.24.2](http://www.numpy.org)
+- [scikit-image 0.20.0](http://scikit-image.org/)
+- [SciPy 1.9.1](https://scipy.org/)
+- [Pandas 2.0.0](https://pandas.pydata.org/)
+- [scikit-learn 1.2.2](https://scikit-learn.org/)
+- [opencv-python 4.8.1.78](https://github.com/opencv/opencv-python)
+- [torch_ema 0.3](https://github.com/fadel/pytorch_ema)
+- [prefetch_generator 1.0.3](https://github.com/justheuristic/prefetch_generator)
+
+See ```requirements.txt``` for details. 
+
+## QuickStart
+
+1. Download this repository by `git clone`.
+```sh
+% git clone https://github.com/funalab/ImageToImageWassersteinSchrödingerBridge.git
 ```
+2. Install requirements.
+```sh
+% cd ImageToImageWassersteinSchrödingerBridge
+% python -m venv venv
+% source ./venv/bin/activate
+% pip install --upgrade pip
+% pip install -r requirements.txt
+```
+3. Download learned model and a part of datasets.
+   - This dataset is a minimum dataset required to run the demo.
+   - NOTE: To download the entire dataset, see `datasets/JUMP/README.md`.　you will need about 960GB of storage, so please check in advance whether you have enough space.
 
-### (2) Train and Test for demo
+    - On Linux:
 
-#### Train 
-原則，cfgファイルでハイパーパラメータや設定を管理
-学習済みモデルはcfgファイルのsave_dir に記述したディレクトリに best_model.pthとして保存される。 
-```shell
-python src/tools/gan/train.py --conf_file confs/debug/gan/cwgangp/train_fold1.cfg
-```
-#### Test
-テストしたい学習済みモデルのパスをcfgファイルのmodel_dir に指定。
-```shell
-python src/tools/gan/test.py --conf_file confs/debug/gan/cwgangp/test.cfg
-```
+        ```sh
+        % mkdir models
+        % wget -P models/i2iwsb.tar.gz https://drive.usercontent.google.com/download?id=1klNecJvscby4DybfYEJeg8omuaRHQIeT&confirm=xxx
+        % tar zxvf models/i2iwsb.tar.gz -C models
+        % wget -P datasets/demo/data.tar.gz https://drive.usercontent.google.com/download?id=1xXsuKHGft_OpZxGzrthUIZUhYq20JYQW&confirm=xxx
+        % tar zxvf datasets/demo/data.tar.gz -C datasets/demo
+        ``` 
 
-ただし、model_dirに下記のようなワイルドカードを設定することで、設定条件に適したfolderからbestな条件を自動探索することも可能
-```shell
-# test.cfg
-model_dir = results/trial/*
-```
+    - On macOS:
 
-### (3) Run experiments
-holdout
-```shell
-bash scripts/gan/holdout.sh confs/debug/gan/cwgangp fold1
-```
-cross validation
-```shell
-bash scripts/gan/cross_validation.sh confs/debug/gan/cwgangp 
-```
+        ```sh
+        % mkdir models
+        % curl -o models/i2iwsb.tar.gz -L "https://drive.usercontent.google.com/download?id=1klNecJvscby4DybfYEJeg8omuaRHQIeT&confirm=xxx"
+        % tar zxvf models/i2iwsb.tar.gz -C models
+        % curl -o datasets/demo/data.tar.gz -L "https://drive.usercontent.google.com/download?id=1xXsuKHGft_OpZxGzrthUIZUhYq20JYQW&confirm=xxx"
+        % tar zxvf datasets/demo/data.tar.gz -C datasets/demo
+        ```
+
+4. Run the model.
+   - On GPU (Specify GPU device name):
+        ```sh
+        % python src/tools/custom/i2iwsb/test.py --conf_file confs/demo/test.cfg --device cuda:1 --model_dir models/i2iwsb --save_dir results/demo/i2iwsb
+        ```
+   - On CPU:
+        ```sh
+        % python src/tools/custom/i2iwsb/test.py --conf_file confs/demo/test.cfg --device cpu --model_dir models/i2iwsb --save_dir results/demo/i2iwsb
+        ```
+    The processing time of above example will be about 30 sec on GPU (NVIDIA V100).
+
+## How to train and run model
+
+1. Train model with the demo dataset.
+
+    ```sh
+    % python src/tools/custom/i2iwsb/train.py --conf_file confs/demo/train_fold1.cfg
+    ```
+
+2. Run model to inference.
+
+    ```sh
+    % python src/tools/custom/i2iwsb/test.py --conf_file confs/demo/test.cfg
+    ```
+
+
+# Acknowledgement
+
+The research was funded by JST CREST, Japan Grant Number JPMJCR2331 to [Akira Funahashi](https://github.com/funasoul).
+
+# References
+
+<a id="ref1"></a>[[1] Liu, Guan-Horng., et al. "I2SB: Image-to-Image Schrödinger Bridge" arXiv, arXiv:2302.05872 (2023).](https://arxiv.org/abs/2302.05872) 
+<a id="ref2"></a>[[2] Cross-Zamirski, Jan Oscar., et al. "Label-free prediction of cell painting from brightfield images" Scientific Reports, 12, 10001 (2022).](https://arxiv.org/abs/2302.05872) 
+<a id="ref3"></a>[[3] Saharia, Chitwan., et al. "Palette: Image-to-Image Diffusion Models" In ACM SIGGRAPH 2022 conference proceedings, 1-10 (2022).](https://arxiv.org/abs/2111.05826) 
+<a id="ref4"></a>[[4] Cross-Zamirski, Jan Oscar., et al. "Class-Guided Image-to-Image Diffusion: Cell Painting from Bright field Images with Class Labels" In Proceedings of the IEEE/CVF International Conference on Computer Vision, 3800-3809 (2023).](https://arxiv.org/abs/2303.08863)
+<a id="ref5"></a>[[5] Chandrasekaran, Srinivas Niranj., et al. "Three million images and morphological profiles of cells treated with matched chemical and genetic perturbations" Nature Methods, 21, 1114–1121 (2024).](https://www.nature.com/articles/s41592-024-02241-6) 
+<a id="ref6"></a>[[6] Weisbart, Erin., et al. "Cell Painting Gallery: an open resource for image-based profiling" Nature Methods, 21, 1775-1777 (2024).](https://www.nature.com/articles/s41592-024-02399-z) 

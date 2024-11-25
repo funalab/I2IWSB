@@ -232,7 +232,7 @@ class DatasetWrapper(Dataset):
         if self.model_name == 'guided-I2I':
             weak_label = 0
             return image_source, image_target, weak_label
-        elif self.model_name in ['cWGAN-GP', 'I2SB', 'Palette', 'cWSB-GP']:
+        elif self.model_name in ['I2SB', 'Palette', 'i2iwsb']:
             return image_source, image_target
         else:
             raise NotImplementedError(f"Invalid model name {self.model_name}")

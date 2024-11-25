@@ -3,7 +3,7 @@ import torch.optim.lr_scheduler as lr_scheduler
 from src.lib.utils.utils import CustomException
 
 
-def get_scheduler_GAN(args, optimizer_G, optimizer_D):
+def get_scheduler_WSB(args, optimizer_G, optimizer_D):
     scheduler_G = None
     scheduler_D = None
     if hasattr(args, "lr_scheduler_G") and args.lr_scheduler is not None:

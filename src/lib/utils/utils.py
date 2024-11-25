@@ -65,7 +65,6 @@ def set_seed(args):
     if hasattr(args, 'reuse') and eval(args.reuse):
         model_dir_path = str(args.init_model)
         last_data = torch.load(f'{model_dir_path}/train/last_epoch_object.cpt')
-        # final modelでsaveしたrandom_stateに関して，dataloaderのgeneratorのみここで指定
         generator = torch.Generator()
         generator.set_state(last_data['torch_generator_random_state'])
     else:
@@ -76,7 +75,7 @@ def set_seed(args):
     torch.backends.cudnn.deterministic = True
     return generator
 
-def set_seed_for_cWGAN_GP(args):
+def set_seed_for_I2IWSB(args):
     os.environ['CUDA_VISIBLE_DEVICES'] = args.device[-1]
     seed = int(args.seed)
     random.seed(seed)
@@ -99,12 +98,11 @@ def set_seed_for_cWGAN_GP(args):
     else:
         generator = torch.Generator()
         generator.manual_seed(seed)
-        generator_for_cWGAN_GP = torch.Generator()
-        generator_for_cWGAN_GP.manual_seed(seed)
 
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
     return generator
+
 
 def get_device(args):
     if "cuda" in args.device:

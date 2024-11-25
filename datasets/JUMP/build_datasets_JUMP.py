@@ -4,7 +4,7 @@ import numpy as np
 from glob import glob
 
 
-def gather_position(path_list: list):  # positionをまとめる<pos>-<channel>
+def gather_position(path_list: list):  # gather position <pos>-<channel>
     pos_list = []
     for p in path_list:
         filename = os.path.basename(p)
@@ -14,7 +14,7 @@ def gather_position(path_list: list):  # positionをまとめる<pos>-<channel>
     return pos_list
 
 
-def gather_well_id(filepath_list: list):  # filepath_listからwell_idをまとめる
+def gather_well_id(filepath_list: list):  # gather well_id from filepath_list
     well_id_list = []
     for p in filepath_list:
         pos = p[p.rfind('/')+1:][:6]  # 'r11c16f06p01' to 'r11c16'
@@ -25,7 +25,7 @@ def gather_well_id(filepath_list: list):  # filepath_listからwell_idをまと�
     return well_id_list
 
 
-def create_filepath_list_from_well_plate_path_list(well_plate_path_list: list):  # well_plate_path_listからfilepath_listを生成
+def create_filepath_list_from_well_plate_path_list(well_plate_path_list: list):  # generate filepath_list from well_plate_path_list
     filepath_list = []
     for well_plate_path in well_plate_path_list:
         well_plate_name = os.path.basename(well_plate_path)
@@ -35,7 +35,7 @@ def create_filepath_list_from_well_plate_path_list(well_plate_path_list: list): 
     return filepath_list
 
 
-def create_filepath_list_from_well_id(well_id_list: list, whole_filepath_list: list):  # well_id_listからfilepath_listを生成
+def create_filepath_list_from_well_id(well_id_list: list, whole_filepath_list: list):  # generate filepath_list from well_id_list
     filepath_list = []
     for well_id in well_id_list:
         plate_name = well_id[:well_id.find('-')]
@@ -50,7 +50,7 @@ def create_filepath_list_from_well_id(well_id_list: list, whole_filepath_list: l
     return filepath_list
 
 
-def write_list_to_txt(savefilepath: str, path_list: list):  # listをtextに書き出し
+def write_list_to_txt(savefilepath: str, path_list: list):  # write list to text
     with open(savefilepath, 'w') as f:
         for ind, d in enumerate(path_list):
             if ind < len(path_list) - 1:
@@ -59,7 +59,7 @@ def write_list_to_txt(savefilepath: str, path_list: list):  # listをtextに書�
                 f.write("%s" % d)
 
 
-def write_train_val_list_to_txt(save_dir, fold_num, train_val_path_list):  # train_val_listをfoldに分割してtextに書き出し
+def write_train_val_list_to_txt(save_dir, fold_num, train_val_path_list):  # Split train_val_list into fold and write to text
 
     for fd in range(fold_num):
 
@@ -87,8 +87,8 @@ def remove_duplicates(l:list):
     return list(set(l))
 
 
-def verify_datasets(save_dir, fold_num, total_train_val, total):  # data leakageがないか検証
-    # trainとvalidationの被りなしを確認
+def verify_datasets(save_dir, fold_num, total_train_val, total):  # Check for data leakage
+    # Check that there is no overlap between train and validation
     print("[Verify that train and validation are not covered]")
     for fd in range(fold_num):
         target = os.path.join(save_dir, 'fold{}'.format(fd + 1))
@@ -106,7 +106,7 @@ def verify_datasets(save_dir, fold_num, total_train_val, total):  # data leakage
 
     print("=" * 100)
     print("[Verify that train/validation and test are not covered]")
-    # train/validationとtestの被りなしを確認
+    # Check that there is no overlap between train/validation and test
     with open(os.path.join(save_dir, 'test.txt'), 'r') as f:
         filelist_test = [line.rstrip() for line in f]
     for fd in range(fold_num):
