@@ -5,7 +5,7 @@ This project is carried out in [Funahashi Lab. at Keio University](https://fun.b
 
 ## Overview
 
-Our model performs image-to-image translation that converts \textit{z}-stacked bright-field microscopy images 
+Our model performs image-to-image translation that converts z-stacked bright-field microscopy images 
 with 3 channels into images of multiple subcellular components with 5 channels.
 
 ![task](raw/task.png)
@@ -21,7 +21,7 @@ The detailed information on this code is described in our paper published on [La
 
 ## Performance
 
-Input bright-field images were captured as three slices spaced at $\pm$4 $\mu$m along the \textit{z}-axis.
+Input bright-field images were captured as three slices spaced at ±4 μm along the z-axis.
 Right panel shows the output images of different models: the ground truth, Palette [[3](#ref3)], 
 guided-I2I [[4](#ref4)], I$^{2}$SB [[1](#ref1)], and our model.
 Subcellular components (names of channels that captured them): mitochondria (Mito); Golgi, plasma membrane,
