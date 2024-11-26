@@ -1,4 +1,4 @@
-# I<sup>2</sup>IWSB: Image-To-Image Wasserstein Schrödinger Bridge
+# I2IWSB: Image-To-Image Wasserstein Schrödinger Bridge
 
 This is the code for [Label-free multiplex microscopic imaging by image-to-image translation overcoming the trade-off between pixel- and image-level similarity](hoge).
 This project is carried out in [Funahashi Lab. at Keio University](https://fun.bio.keio.ac.jp/).
