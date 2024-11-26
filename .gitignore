@@ -9,6 +9,12 @@
 lib/*.pyc
 .ipynb_checkpoints
 
+#Models
+models/
+
+#Datasets
+datasets/demo
+
 #Output&Resource
 results/
 nohup.out
