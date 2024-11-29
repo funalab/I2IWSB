@@ -120,7 +120,7 @@ The research was funded by JST CREST, Japan Grant Number JPMJCR2331 to [Akira Fu
 
 # References
 
-- <a id="ref1"></a>[[1] Liu, Guan-Horng., et al. "I2SB: Image-to-Image Schrödinger Bridge" arXiv, arXiv:2302.05872 (2023).](https://arxiv.org/abs/2302.05872)
+- <a id="ref1"></a>[[1] Liu, Guan-Horng., et al. "I<sup>2</sup>SB: Image-to-Image Schrödinger Bridge" arXiv, arXiv:2302.05872 (2023).](https://arxiv.org/abs/2302.05872)
 - <a id="ref2"></a>[[2] Cross-Zamirski, Jan Oscar., et al. "Label-free prediction of cell painting from brightfield images" Scientific Reports, 12, 10001 (2022).](https://www.nature.com/articles/s41598-022-12914-x)
 - <a id="ref3"></a>[[3] Saharia, Chitwan., et al. "Palette: Image-to-Image Diffusion Models" In ACM SIGGRAPH 2022 conference proceedings, 1-10 (2022).](https://arxiv.org/abs/2111.05826)
 - <a id="ref4"></a>[[4] Cross-Zamirski, Jan Oscar., et al. "Class-Guided Image-to-Image Diffusion: Cell Painting from Bright field Images with Class Labels" In Proceedings of the IEEE/CVF International Conference on Computer Vision, 3800-3809 (2023).](https://arxiv.org/abs/2303.08863)  
