@@ -1,6 +1,6 @@
 # I2IWSB: Image-To-Image Wasserstein Schrödinger Bridge
 
-This is the code for [Label-free multiplex microscopic imaging by image-to-image translation overcoming the trade-off between pixel- and image-level similarity](hoge).
+This is the code for [Label-free multiplex microscopic imaging by image-to-image translation overcoming the trade-off between pixel- and image-level similarity](https://www.biorxiv.org/content/10.1101/2024.11.25.625310v1).
 This project is carried out in [Funahashi Lab. at Keio University](https://fun.bio.keio.ac.jp/).
 
 ## Overview
@@ -17,7 +17,7 @@ Wasserstein distance between distributions.
 
 ![proposed_architecture](raw/proposed_architecture.png)
 
-The detailed information on this code is described in our paper published on [Label-free multiplex microscopic imaging by image-to-image translation overcoming the trade-off between pixel- and image-level similarity](hoge).
+The detailed information on this code is described in our paper published on [Label-free multiplex microscopic imaging by image-to-image translation overcoming the trade-off between pixel- and image-level similarity](https://www.biorxiv.org/content/10.1101/2024.11.25.625310v1).
 
 ## Performance
 
