@@ -42,6 +42,7 @@ We have confirmed that our code works correctly on Ubuntu 18.04, 20.04 and 22.04
 - [Python 3.10.11](https://www.python.org/downloads/)
 - [Pytorch 2.0.0](https://pytorch.org/)
 - [Matplotlib 3.7.1](https://matplotlib.org/)
+- [Seaborn 0.13.2](https://seaborn.pydata.org/)
 - [NumPy 1.24.2](http://www.numpy.org)
 - [scikit-image 0.20.0](http://scikit-image.org/)
 - [SciPy 1.9.1](https://scipy.org/)
@@ -114,6 +115,11 @@ See [`requirements.txt`](https://github.com/funalab/I2IWSB/blob/main/requirement
     % python src/tools/custom/i2iwsb/test.py --conf_file confs/demo/trial/test.cfg --device cuda:1
     ```
 
+3. (If you needed) Perform additional evaluations of model performance as described in our paper
+    ```sh
+    % python src/tools/template/evaluate_outputs.py --conf_file confs/demo/trial/test.cfg --device cuda:1
+    ```
+   
 # Acknowledgement
 
 The research was funded by JST CREST, Japan Grant Number JPMJCR2331 to [Akira Funahashi](https://github.com/funasoul).
